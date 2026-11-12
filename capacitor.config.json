@@ -1,0 +1,8 @@
+{
+  "appId": "com.dk.eggtoss",
+  "appName": "Egg Toss",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#7cc6f2"
+  }
+}

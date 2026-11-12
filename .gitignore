@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Release signing: never commit the key or its passwords
+*.jks
+*.keystore
+keystore.properties
+
+# Android build output and machine-specific files
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/.idea/
+*.iml
+
+# Web assets copied into the Android project by `npx cap sync`
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+.DS_Store

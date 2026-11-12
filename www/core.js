@@ -1,0 +1,305 @@
+/*
+ * Egg Toss — pure game logic. No DOM, no timers, no randomness except the seeded RNG
+ * stored in the state, so the same inputs always give the same game (and tests can
+ * replay it).
+ *
+ * World coordinates: x runs 0..WORLD_W left to right, y runs upwards. Basket n sits
+ * at y = n * BASKET_GAP. The egg rests on a basket's rim at the basket's y.
+ *
+ * A falling egg can be caught by any basket in its path: the next one up, its own, or
+ * any lower one. Only baskets higher than any reached before score. It cracks only if
+ * it reaches the ground.
+ *
+ * update(state, dt) mutates the state and returns a list of events for the
+ * presentation layer (sound, vibration, floating text):
+ *   toss, catch {basket, level, perfect, points}, levelUp {level}, landBack, catchLow {basket},
+ *   crack {x, y}, respawn, gameOver
+ *
+ * Levels 1-20 have 5, 10, 15 ... 100 baskets; level 21 is the endless Master level where
+ * every basket is faster than the last (see levelOf, basketSpec). The game draws a new
+ * background for each level.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.EggCore = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const WORLD_W = 360;
+  const BASKET_GAP = 170;      // vertical distance between baskets
+  const GRAVITY = 1400;        // world units / s²
+  const TOSS_HEIGHT = BASKET_GAP + 75;
+  const TOSS_SPEED = Math.sqrt(2 * GRAVITY * TOSS_HEIGHT);
+  const EGG_RADIUS = 13;
+  const SIDE_MARGIN = 8;
+  const START_LIVES = 3;
+  const CRACK_TIME = 1.8;      // seconds the cracked egg stays on screen
+  const GROUND_Y = -30;        // where an egg that misses every basket cracks
+  const PERFECT_FRACTION = 0.16; // |offset| <= this × width counts as Perfect
+  // Keep the egg's basket this far above the bottom of the view, so the basket below it
+  // (the one most likely to save a missed egg) is on screen too.
+  const CAMERA_BELOW = BASKET_GAP + 120;
+  const CAMERA_LOWEST = GROUND_Y - 150; // never show more grass than this
+  const CAMERA_FALL = 260;     // while the egg falls below its basket, keep it this far above the bottom
+  const LEVELS = 20;           // normal levels; level L has 5 × L baskets
+  const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
+
+  /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
+  function nextRandom(state) {
+    let t = (state.rng = (state.rng + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  /** Number of baskets to catch in a level: 5, 10, 15 ... 100, then endless for Master. */
+  function levelSize(level) {
+    return level <= LEVELS ? 5 * level : Infinity;
+  }
+
+  /** The basket number at which a level is completed: 5, 15, 30 ... 1050. */
+  function levelEnd(level) {
+    return level <= LEVELS ? (5 * level * (level + 1)) / 2 : Infinity;
+  }
+
+  const MASTER_START = levelEnd(LEVELS); // 1050
+
+  /**
+   * Level the egg is in while it sits in basket n. Catching the last basket of a level
+   * (basket 5, 15, 30 ...) moves it into the next level.
+   */
+  function levelOf(n) {
+    if (n >= MASTER_START) return MASTER_LEVEL;
+    let level = 1;
+    while (n >= levelEnd(level)) level++;
+    return level;
+  }
+
+  /** How far into its level basket n is: { level, done, size } (size is Infinity for Master). */
+  function levelProgress(n) {
+    const level = levelOf(n);
+    return { level, done: n - (level === 1 ? 0 : levelEnd(level - 1)), size: levelSize(level) };
+  }
+
+  /**
+   * Width and speed for basket n. Through levels 1-20 baskets get narrower and faster a
+   * little with every basket; in the Master level they stay narrow and keep speeding up.
+   */
+  function basketSpec(n) {
+    if (n === 0) return { width: 120, speed: 0 };
+    if (n >= MASTER_START) return { width: 56, speed: 265 + (n - MASTER_START) * 1.5 };
+    const { level, done, size } = levelProgress(n);
+    const p = (level - 1 + done / size) / LEVELS; // 0 at the start, 1 at the end of level 20
+    return {
+      width: 112 - 56 * Math.pow(p, 0.8),
+      speed: 70 + 195 * Math.pow(p, 0.75),
+    };
+  }
+
+  function makeBasket(state, n) {
+    const { width, speed } = basketSpec(n);
+    const half = width / 2 + SIDE_MARGIN;
+    const x = n === 0 ? WORLD_W / 2 : half + nextRandom(state) * (WORLD_W - 2 * half);
+    const dir = nextRandom(state) < 0.5 ? -1 : 1;
+    return { n, x, y: n * BASKET_GAP, width, vx: speed * dir };
+  }
+
+  function basket(state, n) {
+    while (state.baskets.length <= n) state.baskets.push(makeBasket(state, state.baskets.length));
+    return state.baskets[n];
+  }
+
+  /**
+   * A new game. `best` is the saved best score; `seed` makes the run repeatable.
+   * The game starts in the 'ready' phase; call start() to play.
+   */
+  function newGame(best = 0, seed = Date.now()) {
+    const state = {
+      phase: 'ready',          // ready | playing | paused | over
+      score: 0,
+      best,
+      lives: START_LIVES,
+      current: 0,              // index of the basket the egg belongs to
+      highest: 0,              // highest basket reached; only higher ones score
+      levelPoints: {},         // points scored in each level this game: { [level]: points }
+      baskets: [],
+      egg: { mode: 'sitting', x: WORLD_W / 2, y: 0, vy: 0 }, // sitting | flying | cracked
+      crack: null,             // { x, y, timer } while the cracked egg is shown
+      cameraY: CAMERA_LOWEST,
+      time: 0,
+      rng: seed | 0,
+    };
+    basket(state, 0);
+    basket(state, 1);
+    return state;
+  }
+
+  function start(state) {
+    if (state.phase === 'ready' || state.phase === 'paused') state.phase = 'playing';
+    return state;
+  }
+
+  function pause(state) {
+    if (state.phase === 'playing') state.phase = 'paused';
+    return state;
+  }
+
+  /** Throw the egg straight up. Only works while it is sitting in a basket. */
+  function toss(state) {
+    if (state.phase !== 'playing' || state.egg.mode !== 'sitting') return [];
+    state.egg.mode = 'flying';
+    state.egg.vy = TOSS_SPEED;
+    return [{ type: 'toss' }];
+  }
+
+  function moveBaskets(state, dt) {
+    // Only baskets that can be on screen move: around the egg's basket and, while it
+    // falls, around the egg itself.
+    const eggLevel = Math.floor(state.egg.y / BASKET_GAP);
+    const from = Math.max(0, Math.min(state.current - 1, eggLevel - 2));
+    const to = state.current + 4;
+    for (let n = from; n <= to; n++) {
+      const b = basket(state, n);
+      if (b.vx === 0) continue;
+      b.x += b.vx * dt;
+      const min = b.width / 2 + SIDE_MARGIN;
+      const max = WORLD_W - min;
+      if (b.x < min) { b.x = min + (min - b.x); b.vx = Math.abs(b.vx); }
+      if (b.x > max) { b.x = max - (b.x - max); b.vx = -Math.abs(b.vx); }
+    }
+  }
+
+  /** How far the egg is from a basket's centre, or null if it would miss the basket. */
+  function catchOffset(b, eggX) {
+    const offset = eggX - b.x;
+    return Math.abs(offset) <= b.width / 2 - EGG_RADIUS * 0.4 ? offset : null;
+  }
+
+  function stepEgg(state, dt, events) {
+    const egg = state.egg;
+    const own = basket(state, state.current);
+
+    if (egg.mode === 'sitting') {
+      egg.x = own.x;
+      egg.y = own.y;
+      return;
+    }
+
+    if (egg.mode === 'cracked') {
+      state.crack.timer -= dt;
+      if (state.crack.timer > 0) return;
+      state.crack = null;
+      if (state.lives <= 0) {
+        state.phase = 'over';
+        events.push({ type: 'gameOver', score: state.score, best: state.best });
+      } else {
+        egg.mode = 'sitting';
+        egg.vy = 0;
+        egg.x = own.x;
+        egg.y = own.y;
+        events.push({ type: 'respawn' });
+      }
+      return;
+    }
+
+    // Flying: straight up and down, no sideways motion.
+    const prevY = egg.y;
+    egg.vy -= GRAVITY * dt;
+    egg.y += egg.vy * dt;
+    if (egg.vy >= 0) return;
+
+    const next = basket(state, state.current + 1);
+    if (prevY >= next.y && egg.y < next.y) {
+      const offset = catchOffset(next, egg.x);
+      if (offset !== null) {
+        state.current += 1;
+        // Only baskets above the highest one reached so far score.
+        const isNew = state.current > state.highest;
+        const newLevel = isNew && levelOf(state.current) > levelOf(state.highest);
+        const perfect = isNew && Math.abs(offset) <= next.width * PERFECT_FRACTION;
+        const points = isNew ? (perfect ? 2 : 1) : 0;
+        state.highest = Math.max(state.highest, state.current);
+        state.score += points;
+        if (state.score > state.best) state.best = state.score;
+        // The catch belongs to the level it was made in: catching basket 5 completes level 1.
+        const level = levelOf(state.current - 1);
+        if (points > 0) state.levelPoints[level] = (state.levelPoints[level] || 0) + points;
+        settle(egg, next);
+        basket(state, state.current + 1); // make sure the next target exists
+        events.push({ type: 'catch', basket: state.current, level, perfect, points, x: egg.x, y: egg.y });
+        if (newLevel) events.push({ type: 'levelUp', level: levelOf(state.current) });
+        return;
+      }
+    }
+
+    // Any basket at or below its own can catch the egg on the way down.
+    for (let n = Math.min(state.current, Math.floor(prevY / BASKET_GAP)); n >= 0; n--) {
+      const b = basket(state, n);
+      if (b.y <= egg.y) break; // not reached yet
+      if (prevY >= b.y && catchOffset(b, egg.x) !== null) {
+        settle(egg, b);
+        if (n === state.current) {
+          events.push({ type: 'landBack' });
+        } else {
+          state.current = n;
+          events.push({ type: 'catchLow', basket: n, x: egg.x, y: egg.y });
+        }
+        return;
+      }
+    }
+
+    if (egg.y < GROUND_Y) {
+      egg.mode = 'cracked';
+      egg.vy = 0;
+      egg.y = GROUND_Y;
+      state.lives -= 1;
+      state.crack = { x: egg.x, y: GROUND_Y, timer: CRACK_TIME };
+      events.push({ type: 'crack', x: egg.x, y: GROUND_Y, livesLeft: state.lives });
+    }
+  }
+
+  function settle(egg, b) {
+    egg.mode = 'sitting';
+    egg.vy = 0;
+    egg.y = b.y;
+  }
+
+  /**
+   * Where the camera wants to be: the egg's basket near the bottom of the view, or
+   * lower while the egg falls below it or lies cracked on the ground.
+   */
+  function cameraTarget(state) {
+    let target = basket(state, state.current).y - CAMERA_BELOW;
+    if (state.egg.mode === 'flying' && state.egg.vy < 0) target = Math.min(target, state.egg.y - CAMERA_FALL);
+    if (state.egg.mode === 'cracked') target = CAMERA_LOWEST;
+    return Math.max(target, CAMERA_LOWEST);
+  }
+
+  /** Advance the game by dt seconds. Returns the events that happened. */
+  function update(state, dt) {
+    const events = [];
+    if (state.phase !== 'playing') return events;
+    // Large frame gaps (tab switches, slow devices) are split so collisions are never skipped.
+    let remaining = Math.min(dt, 0.25);
+    while (remaining > 0) {
+      const step = Math.min(remaining, 1 / 120);
+      remaining -= step;
+      state.time += step;
+      moveBaskets(state, step);
+      stepEgg(state, step, events);
+      // The camera chases a falling egg quickly and drifts back up gently.
+      const target = cameraTarget(state);
+      const rate = target < state.cameraY ? 12 : 4;
+      state.cameraY += (target - state.cameraY) * Math.min(1, step * rate);
+      if (state.phase !== 'playing') break;
+    }
+    return events;
+  }
+
+  return {
+    WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
+    LEVELS, MASTER_LEVEL, MASTER_START,
+    newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelProgress, cameraTarget,
+  };
+});
