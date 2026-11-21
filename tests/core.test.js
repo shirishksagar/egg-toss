@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 40);
-  assert.equal(core.MASTER_LEVEL, 41);
-  assert.equal(core.MASTER_START, 2050);
+  assert.equal(core.LEVELS, 50);
+  assert.equal(core.MASTER_LEVEL, 51);
+  assert.equal(core.MASTER_START, 2550);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -746,4 +746,53 @@ test('a pulsing basket speeds up and slows down smoothly but never stops', () =>
   b.vx = 0;
   core.update(s, 1);
   assert.equal(b.vx, 0, 'a frozen basket stays frozen');
+});
+
+test('a growing basket catches with the width it has at that moment', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  for (const b of all.baskets) {
+    if (!b.grow) continue;
+    assert.ok(core.levelOf(b.n - 1) >= 41, `basket ${b.n}: growing starts in level 41`);
+    const smallest = b.grow.base * (core.GROW_MID - b.grow.amp);
+    const biggest = b.grow.base * (core.GROW_MID + b.grow.amp);
+    assert.ok(smallest >= 40 && biggest <= 90, `basket ${b.n}: ${smallest}-${biggest} wide`);
+    assert.ok(b.width >= smallest - 1e-9 && b.width <= biggest + 1e-9);
+  }
+
+  // Big: an egg well off the normal width still lands.
+  const s = playing(8);
+  const b = findTrick(s, 'grow', core.levelStart(41));
+  jumpTo(s, b.n - 1);
+  const base = b.grow.base;
+  Object.assign(b.grow, { amp: 0.4, rate: 0, phase: Math.PI / 2 });
+  aimNext(s, (s.egg.x < core.WORLD_W / 2 ? 1 : -1) * base * 0.6);
+  core.toss(s);
+  const caught = settle(s).find((e) => e.type === 'catch');
+  assert.ok(caught, 'caught by the stretched basket');
+  assert.ok(Math.abs(b.width - base * 1.55) < 1e-9);
+
+  // Small: the same kind of throw misses.
+  const t = playing(8);
+  const c = findTrick(t, 'grow', core.levelStart(41));
+  jumpTo(t, c.n - 1);
+  Object.assign(c.grow, { amp: 0.4, rate: 0, phase: -Math.PI / 2 });
+  aimNext(t, (t.egg.x < core.WORLD_W / 2 ? 1 : -1) * c.grow.base * 0.36);
+  core.toss(t);
+  const events = settle(t);
+  assert.ok(!events.some((e) => e.type === 'catch'), 'missed the shrunken basket');
+  assert.ok(Math.abs(c.width - c.grow.base * 0.75) < 1e-9);
+
+  // It grows and shrinks over time and stays inside the screen while it does.
+  const u = playing(8);
+  const d = findTrick(u, 'grow', core.levelStart(41));
+  jumpTo(u, d.n - 1);
+  Object.assign(d.grow, { amp: 0.4, rate: Math.PI, phase: 0 });
+  const widths = [];
+  for (let i = 0; i < 120; i++) {
+    core.update(u, FRAME);
+    widths.push(d.width);
+    assert.ok(d.x - d.width / 2 >= 0 && d.x + d.width / 2 <= core.WORLD_W, 'inside the screen');
+  }
+  assert.ok(Math.max(...widths) > d.grow.base * 1.5 && Math.min(...widths) < d.grow.base * 0.8);
 });

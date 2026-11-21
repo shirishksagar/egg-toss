@@ -536,6 +536,19 @@
       arrow(x - 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
       arrow(x + 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
     }
+    if (b.grow) {
+      // Purple rim, with little arrows at both ends pointing out while it grows, in while it shrinks.
+      g.strokeStyle = '#b06cff';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.ellipse(x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI, false);
+      g.stroke();
+      const growing = Math.cos(b.grow.phase) > 0;
+      for (const side of [-1, 1]) {
+        const ax = x + side * (b.width / 2 + 7);
+        arrow(ax, rimY, growing ? side : -side, 4.5, '#b06cff');
+      }
+    }
     if (b.pulse) {
       // Orange band with speed stripes: one to three, the faster it goes right now.
       const bandY = rimY + 22;

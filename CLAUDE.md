@@ -60,6 +60,10 @@ Never print, commit or overwrite them; without them no update to the same app ca
 - **Pulse (levels 31-40, v3):** band mix pulse 2 : turn 1, chance 45% → 70%. Speed swings smoothly between
   (1 - amp) and (1 + amp) × its normal speed: amp 0.45-0.6, rate 2.2-3.4 rad/s (one swing every 1.8-2.9 s),
   random start phase. It keeps its direction and never stops. Orange band with 1-3 speed stripes.
+- **Grow (levels 41-50, v4):** band mix grow 2 : pulse 1 : turn 1, chance 50% → 72%. Width swings smoothly
+  between (1.15 - amp) and (1.15 + amp) × its normal width (`GROW_MID`): amp 0.3-0.4, rate 1.8-2.8 rad/s,
+  random start phase, so a 56 basket is about 42-87 wide. A catch uses the width at that moment. Growing
+  next to a wall pushes the basket back inside. Purple rim, with arrows pointing out (growing) or in.
 
 ## Starting from a level, saves
 
@@ -85,6 +89,7 @@ Branches are not merged into main.
 |---|---|---|---|---|
 | `egg-toss-v2-levels-21-30` | 2.0 (20) | 30 | 31 | Start from a reached level, 50-basket levels, turning baskets, scenes Kite Day … Comet Night |
 | `egg-toss-v3-levels-31-40` | 3.0 (30) | 40 | 41 | Pulsing baskets (speed up and slow down), scenes Butterfly Garden … Neon Night |
+| `egg-toss-v4-levels-41-50` | 4.0 (40) | 50 | 51 | Growing baskets (catch width changes), scenes Hot Air Valley … Glacier Glow |
 
 ## Shipping a version
 

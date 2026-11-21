@@ -54,13 +54,14 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 40;           // normal levels
+  const LEVELS = 50;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
   // the end of level 100. The tricks bring the challenge.
   const LATE_SPEED_RISE = 65 / 4000;
   const TURN_WARN = 0.35;      // seconds a turning basket wiggles before it turns
+  const GROW_MID = 1.15;       // a growing basket's width swings around this × its normal width
 
   /**
    * Tricks for the levels after 20. Each band of levels lists the tricks its baskets can
@@ -71,12 +72,14 @@
   const TRICK_BANDS = [
     { from: 21, to: 30, tricks: [['turn', 1]], chance: [0.35, 0.65] },
     { from: 31, to: 40, tricks: [['pulse', 2], ['turn', 1]], chance: [0.45, 0.7] },
+    { from: 41, to: 50, tricks: [['grow', 2], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.72] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
   const TRICKS = {
     turn: { first: 21, tip: 'Wiggly baskets suddenly turn back!' },
     pulse: { first: 31, tip: 'Zoomy baskets speed up and slow down!' },
+    grow: { first: 41, tip: 'Stretchy baskets grow and shrink!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -104,7 +107,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 2050
+  const MASTER_START = levelEnd(LEVELS); // 2550
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -197,7 +200,23 @@
         phase: nextRandom(state) * Math.PI * 2,
       };
     },
+    // Width swings smoothly between (GROW_MID - amp) and (GROW_MID + amp) times its normal
+    // width (about 42 to 87 for a 56 basket): catching needs the egg inside the width it
+    // has at that moment.
+    grow(state, b) {
+      b.grow = {
+        base: b.width,
+        amp: 0.3 + nextRandom(state) * 0.1,
+        rate: 1.8 + nextRandom(state) * 1.0,
+        phase: nextRandom(state) * Math.PI * 2,
+      };
+      b.width = growWidth(b.grow);
+    },
   };
+
+  function growWidth(grow) {
+    return grow.base * (GROW_MID + grow.amp * Math.sin(grow.phase));
+  }
 
   function addTricks(state, b, level) {
     const band = trickBand(level);
@@ -307,6 +326,13 @@
     if (pulse) {
       pulse.phase = (pulse.phase + pulse.rate * dt) % (Math.PI * 2);
       b.vx = Math.sign(b.vx) * pulse.base * (1 + pulse.amp * Math.sin(pulse.phase));
+    }
+    const grow = b.grow;
+    if (grow) {
+      grow.phase = (grow.phase + grow.rate * dt) % (Math.PI * 2);
+      b.width = growWidth(grow);
+      const min = b.width / 2 + SIDE_MARGIN; // growing near a wall pushes it back inside
+      b.x = Math.min(WORLD_W - min, Math.max(min, b.x));
     }
   }
 
@@ -466,7 +492,7 @@
 
   return {
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
-    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN,
+    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
     cameraTarget, groundY, trickChance, trickTip, migrateSave,
   };

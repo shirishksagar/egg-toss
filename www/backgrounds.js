@@ -737,6 +737,224 @@
     }
   }
 
+  function hotAirBalloons(g, v) {
+    const stripes = [['#ff595e', '#ffca3a'], ['#1982c4', '#ffffff'], ['#8ac926', '#ff924c'], ['#6a4c93', '#ffd6e0']];
+    scrolling(v, 260, 0.28, (i, y0) => {
+      const x = 45 + hash(i + 31) * (v.W - 90) + Math.sin(v.clock * 0.4 + i) * 12;
+      const y = y0 + Math.sin(v.clock * 0.8 + i) * 6;
+      const r = 20 + hash(i + 6) * 10;
+      const [c1, c2] = stripes[wrap(i, stripes.length)];
+      g.save();
+      g.beginPath();
+      g.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2);
+      g.clip();
+      for (let k = -3; k <= 3; k++) {
+        g.fillStyle = k % 2 ? c1 : c2;
+        g.fillRect(x + k * r * 0.3 - r * 0.15, y - r * 1.2, r * 0.3, r * 2.4);
+      }
+      g.restore();
+      g.strokeStyle = 'rgba(80,50,30,0.7)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x - r * 0.55, y + r * 0.95); g.lineTo(x - r * 0.25, y + r * 1.6);
+      g.moveTo(x + r * 0.55, y + r * 0.95); g.lineTo(x + r * 0.25, y + r * 1.6);
+      g.stroke();
+      g.fillStyle = '#8b5a2b';
+      g.fillRect(x - r * 0.28, y + r * 1.6, r * 0.56, r * 0.4);
+    });
+  }
+
+  function windmills(g, v, { color = '#f4f1e8' } = {}) {
+    for (let i = 0; i < 3; i++) {
+      const x = v.W * (0.18 + i * 0.32);
+      const base = v.H;
+      const h = v.H * (0.2 + hash(i + 40) * 0.08);
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(x - 9, base); g.lineTo(x - 4, base - h); g.lineTo(x + 4, base - h); g.lineTo(x + 9, base);
+      g.closePath();
+      g.fill();
+      const turn = v.clock * (1 + i * 0.3) + i;
+      g.save();
+      g.translate(x, base - h);
+      g.rotate(turn);
+      g.fillStyle = 'rgba(255,255,255,0.95)';
+      for (let k = 0; k < 3; k++) {
+        g.rotate((Math.PI * 2) / 3);
+        g.beginPath();
+        g.moveTo(-2, 0); g.lineTo(-4, -h * 0.5); g.lineTo(4, -h * 0.5); g.lineTo(2, 0);
+        g.closePath();
+        g.fill();
+      }
+      g.fillStyle = '#c9a66b';
+      g.beginPath();
+      g.arc(0, 0, 3, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+  }
+
+  function castle(g, v, { color = 'rgba(120,90,160,0.55)' } = {}) {
+    const base = v.H * 0.78;
+    const cx = v.W * 0.5;
+    g.fillStyle = color;
+    const towers = [[-80, 70, 22], [-40, 110, 26], [0, 150, 30], [40, 110, 26], [80, 70, 22]];
+    for (const [dx, h, w] of towers) {
+      g.fillRect(cx + dx - w / 2, base - h, w, h);
+      g.beginPath();
+      g.moveTo(cx + dx - w / 2 - 4, base - h);
+      g.lineTo(cx + dx, base - h - w * 1.1);
+      g.lineTo(cx + dx + w / 2 + 4, base - h);
+      g.closePath();
+      g.fill();
+    }
+    g.fillRect(cx - 95, base - 45, 190, 45);
+    clouds(g, { ...v, cameraY: 0 }, { color: 'rgba(255,255,255,0.85)', spacing: 60, size: 1.2, parallax: 0 });
+    g.fillStyle = 'rgba(255,240,180,0.9)';
+    for (const [dx, h] of [[-40, 80], [0, 115], [40, 80]]) {
+      g.beginPath();
+      g.ellipse(cx + dx, base - h, 3, 5, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    const flag = Math.sin(v.clock * 4) * 3;
+    g.fillStyle = '#ff6b6b';
+    g.beginPath();
+    g.moveTo(cx, base - 183); g.lineTo(cx + 14, base - 179 + flag); g.lineTo(cx, base - 174);
+    g.closePath();
+    g.fill();
+  }
+
+  function volcano(g, v) {
+    const cx = v.W * 0.55;
+    const base = v.H * 0.82;
+    for (let i = 0; i < 6; i++) {
+      const t = (v.clock * 0.25 + i / 6) % 1;
+      const r = 10 + t * 30;
+      g.fillStyle = `rgba(120,110,110,${0.5 * (1 - t)})`;
+      g.beginPath();
+      g.arc(cx + Math.sin(t * 5 + i) * 15 + t * 30, base - 120 - t * 160, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#5b3a29';
+    g.beginPath();
+    g.moveTo(cx - 140, base); g.lineTo(cx - 25, base - 120); g.lineTo(cx + 25, base - 120); g.lineTo(cx + 140, base);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#ff7b00';
+    g.beginPath();
+    g.moveTo(cx - 25, base - 120); g.lineTo(cx + 25, base - 120); g.lineTo(cx + 12, base - 95);
+    g.lineTo(cx + 4, base - 108); g.lineTo(cx - 6, base - 80); g.lineTo(cx - 12, base - 104);
+    g.closePath();
+    g.fill();
+  }
+
+  function rocket(g, v) {
+    const t = (v.clock * 0.12) % 1;
+    const x = v.W * 0.3 + t * v.W * 0.15;
+    const y = v.H * (1.1 - t * 1.4);
+    g.save();
+    g.translate(x, y);
+    g.rotate(0.12);
+    const flame = 10 + Math.sin(v.clock * 30) * 4;
+    g.fillStyle = '#ffb703';
+    g.beginPath();
+    g.moveTo(-6, 18); g.lineTo(0, 18 + flame + 8); g.lineTo(6, 18);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(0, -24); g.quadraticCurveTo(10, -10, 8, 18); g.lineTo(-8, 18); g.quadraticCurveTo(-10, -10, 0, -24);
+    g.fill();
+    g.fillStyle = '#e63946';
+    g.beginPath();
+    g.moveTo(-8, 8); g.lineTo(-15, 22); g.lineTo(-8, 18);
+    g.moveTo(8, 8); g.lineTo(15, 22); g.lineTo(8, 18);
+    g.fill();
+    g.fillStyle = '#4cc9f0';
+    g.beginPath();
+    g.arc(0, -6, 4, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+    for (let k = 1; k <= 8; k++) {
+      g.fillStyle = `rgba(255,255,255,${0.35 - k * 0.04})`;
+      g.beginPath();
+      g.arc(x - k * 2.5, y + 30 + k * 10, 5 + k * 1.5, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function icebergs(g, v) {
+    const level = v.H * 0.8;
+    for (const [fx, w, h] of [[0.15, 70, 60], [0.55, 110, 95], [0.9, 60, 45]]) {
+      const x = v.W * fx;
+      const bob = Math.sin(v.clock + fx * 9) * 2;
+      g.fillStyle = '#f2fbff';
+      g.beginPath();
+      g.moveTo(x - w / 2, level + bob);
+      g.lineTo(x - w * 0.2, level - h + bob);
+      g.lineTo(x + w * 0.05, level - h * 0.8 + bob);
+      g.lineTo(x + w * 0.25, level - h * 0.95 + bob);
+      g.lineTo(x + w / 2, level + bob);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(150,200,230,0.6)';
+      g.beginPath();
+      g.moveTo(x + w * 0.05, level - h * 0.8 + bob);
+      g.lineTo(x + w * 0.25, level - h * 0.95 + bob);
+      g.lineTo(x + w / 2, level + bob);
+      g.lineTo(x + w * 0.1, level + bob);
+      g.closePath();
+      g.fill();
+    }
+  }
+
+  function hearts(g, v, { count = 16 } = {}) {
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i) * v.W + Math.sin(v.clock + i) * 12, v.W);
+      const y = wrap(hash(i + 44) * (v.H + 40) - v.clock * (14 + hash(i + 2) * 16), v.H + 40) - 20;
+      const s = 5 + hash(i + 7) * 6;
+      g.fillStyle = `rgba(255,${90 + Math.floor(hash(i + 1) * 80)},${140 + Math.floor(hash(i + 3) * 60)},0.75)`;
+      g.beginPath();
+      g.moveTo(x, y + s * 0.9);
+      g.bezierCurveTo(x - s * 1.4, y - s * 0.2, x - s * 0.6, y - s * 1.2, x, y - s * 0.4);
+      g.bezierCurveTo(x + s * 0.6, y - s * 1.2, x + s * 1.4, y - s * 0.2, x, y + s * 0.9);
+      g.fill();
+    }
+  }
+
+  function zeppelin(g, v) {
+    const x = wrap(v.clock * 14, v.W + 200) - 100;
+    const y = v.H * 0.25 + Math.sin(v.clock * 0.7) * 6;
+    g.fillStyle = '#c0c8d6';
+    g.beginPath();
+    g.ellipse(x, y, 60, 18, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.4)';
+    g.beginPath();
+    g.ellipse(x + 5, y - 7, 45, 5, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#e76f51';
+    g.beginPath();
+    g.moveTo(x - 55, y); g.lineTo(x - 72, y - 16); g.lineTo(x - 66, y);
+    g.lineTo(x - 72, y + 16);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#6d597a';
+    g.fillRect(x - 12, y + 16, 24, 7);
+  }
+
+  function mist(g, v, { color = '255,255,255', alpha = 0.25 } = {}) {
+    for (let k = 0; k < 3; k++) {
+      const y = v.H * (0.55 + k * 0.15);
+      const grad = g.createLinearGradient(0, y - 30, 0, y + 30);
+      grad.addColorStop(0, `rgba(${color},0)`);
+      grad.addColorStop(0.5, `rgba(${color},${alpha})`);
+      grad.addColorStop(1, `rgba(${color},0)`);
+      g.fillStyle = grad;
+      g.fillRect(0, y - 30 + Math.sin(v.clock * 0.3 + k) * 6, v.W, 60);
+    }
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -822,6 +1040,27 @@
       deco: (g, v) => { sun(g, v, { x: 0.6, y: 0.7, r: 44, color: '#ffe29a', glow: 'rgba(255,160,90,0.5)' }); sea(g, v, { color: '#6c5b7b', foam: 'rgba(255,220,200,0.55)', level: 0.78 }); sailboats(g, v, { level: 0.78 }); } },
     { name: 'Neon Night', top: '#12002b', bottom: '#3a0f5c',
       deco: (g, v) => { stars(g, v, { count: 40, alpha: 0.7 }); meteors(g, v, { count: 2, color: '255,120,240' }); skyline(g, v, { color: '#160a2e', lit: 'rgba(120,240,255,0.8)', neon: ['#ff4fd8', '#4fe3ff', '#b6ff4f'] }); } },
+    // Levels 41-50 (v4): growing baskets.
+    { name: 'Hot Air Valley', top: '#87ceeb', bottom: '#f0fff0',
+      deco: (g, v) => { mountains(g, v, { color: 'rgba(110,170,110,0.55)' }); clouds(g, v, { size: 0.8 }); hotAirBalloons(g, v); } },
+    { name: 'Windmill Fields', top: '#a0d8ef', bottom: '#fdf6d8',
+      deco: (g, v) => { sun(g, v, { x: 0.82, y: 0.12, r: 30 }); clouds(g, v, { color: 'rgba(255,255,255,0.75)' }); windmills(g, v); } },
+    { name: 'Castle in the Clouds', top: '#f7a8d8', bottom: '#fde2f3',
+      deco: (g, v) => { sparkles(g, v, { count: 20, color: '255,255,255' }); castle(g, v); birds(g, v, { count: 3, color: 'rgba(120,60,110,0.5)' }); } },
+    { name: 'Volcano Island', top: '#ff9966', bottom: '#ffe0b2',
+      deco: (g, v) => { volcano(g, v); sea(g, v, { color: '#1b98b5', level: 0.82 }); } },
+    { name: 'Rocket Launch', top: '#1d2b64', bottom: '#f8cdda',
+      deco: (g, v) => { stars(g, v, { count: 35, alpha: 0.8 }); rocket(g, v); } },
+    { name: 'Iceberg Bay', top: '#a8e6f0', bottom: '#effcff',
+      deco: (g, v) => { snow(g, v, { count: 30 }); icebergs(g, v); sea(g, v, { color: '#3aa6c4', foam: 'rgba(255,255,255,0.7)', level: 0.8 }); } },
+    { name: 'Sweetheart Sky', top: '#ff8fab', bottom: '#ffe5ec',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,240,245,0.8)' }); hearts(g, v); } },
+    { name: 'Zeppelin Skies', top: '#5d9cec', bottom: '#dbe9fb',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.85)', size: 1.2 }); zeppelin(g, v); birds(g, v, { count: 3 }); } },
+    { name: 'Jungle Rain', top: '#2d6a4f', bottom: '#95d5b2',
+      deco: (g, v) => { treeline(g, v, { color: '#1b4332', height: 0.3 }); mist(g, v); rain(g, v, { count: 50, color: 'rgba(220,255,230,0.5)' }); } },
+    { name: 'Glacier Glow', top: '#03122b', bottom: '#14506b',
+      deco: (g, v) => { stars(g, v, { count: 45 }); aurora(g, v); mountains(g, v, { color: '#2a4d69', snowCap: true }); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

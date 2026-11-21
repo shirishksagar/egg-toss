@@ -1,6 +1,6 @@
 {
   "name": "egg-toss",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "private": true,
   "description": "Egg Toss: throw the egg up into the next moving basket.",
   "scripts": {

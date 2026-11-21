@@ -154,6 +154,7 @@ h2 { font-size: 32px; }
 }
 .mark.turn { background: #3fc1b0; }
 .mark.pulse { background: #ff8c42; }
+.mark.grow { background: #b06cff; }
 
 /* "Start at" level picker (shown once a level after 1 has been reached). */
 .start-from {
