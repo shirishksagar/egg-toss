@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 30);
-  assert.equal(core.MASTER_LEVEL, 31);
-  assert.equal(core.MASTER_START, 1550);
+  assert.equal(core.LEVELS, 40);
+  assert.equal(core.MASTER_LEVEL, 41);
+  assert.equal(core.MASTER_START, 2050);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -720,4 +720,30 @@ test('a turning basket goes on, suddenly turns back for a moment, then carries o
   b.vx = 0;
   core.update(s, 2);
   assert.equal(b.vx, 0);
+});
+
+test('a pulsing basket speeds up and slows down smoothly but never stops', () => {
+  const s = playing(8);
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  for (const b of all.baskets) {
+    if (!b.pulse) continue;
+    assert.ok(core.levelOf(b.n - 1) >= 31, `basket ${b.n}: pulsing starts in level 31`);
+    assert.ok(b.pulse.amp < 0.65, 'never slower than a third of its speed');
+  }
+  const b = findTrick(s, 'pulse', core.levelStart(31));
+  jumpTo(s, b.n - 1);
+  b.x = core.WORLD_W - b.width / 2 - 10;
+  b.vx = -Math.abs(b.vx);
+  Object.assign(b.pulse, { amp: 0.5, rate: Math.PI, phase: 0 }); // one swing every 2 s
+  const base = b.pulse.base;
+  core.update(s, 0.25);
+  core.update(s, 0.25);
+  assert.ok(Math.abs(Math.abs(b.vx) - base * 1.5) < base * 0.01, 'fastest a quarter of the way through');
+  assert.ok(b.vx < 0, 'still going the same way');
+  for (let i = 0; i < 4; i++) core.update(s, 0.25);
+  assert.ok(Math.abs(Math.abs(b.vx) - base * 0.5) < base * 0.01, 'slowest three quarters of the way through');
+  b.vx = 0;
+  core.update(s, 1);
+  assert.equal(b.vx, 0, 'a frozen basket stays frozen');
 });

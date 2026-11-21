@@ -54,7 +54,7 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 30;           // normal levels
+  const LEVELS = 40;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
@@ -70,11 +70,13 @@
    */
   const TRICK_BANDS = [
     { from: 21, to: 30, tricks: [['turn', 1]], chance: [0.35, 0.65] },
+    { from: 31, to: 40, tricks: [['pulse', 2], ['turn', 1]], chance: [0.45, 0.7] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
   const TRICKS = {
     turn: { first: 21, tip: 'Wiggly baskets suddenly turn back!' },
+    pulse: { first: 31, tip: 'Zoomy baskets speed up and slow down!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -102,7 +104,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 1550
+  const MASTER_START = levelEnd(LEVELS); // 2050
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -184,6 +186,16 @@
       const go = 0.9 + nextRandom(state) * 0.7;
       const back = 0.3 + nextRandom(state) * 0.2;
       b.turn = { go, back, left: go * (0.3 + 0.7 * nextRandom(state)), backing: false };
+    },
+    // Speed swings smoothly between (1 - amp) and (1 + amp) times its normal speed, once
+    // every 2π / rate seconds. It never stops and keeps its direction.
+    pulse(state, b) {
+      b.pulse = {
+        base: Math.abs(b.vx),
+        amp: 0.45 + nextRandom(state) * 0.15,
+        rate: 2.2 + nextRandom(state) * 1.2,
+        phase: nextRandom(state) * Math.PI * 2,
+      };
     },
   };
 
@@ -290,6 +302,11 @@
         turn.left += turn.backing ? turn.back : turn.go;
         b.vx = -b.vx;
       }
+    }
+    const pulse = b.pulse;
+    if (pulse) {
+      pulse.phase = (pulse.phase + pulse.rate * dt) % (Math.PI * 2);
+      b.vx = Math.sign(b.vx) * pulse.base * (1 + pulse.amp * Math.sin(pulse.phase));
     }
   }
 

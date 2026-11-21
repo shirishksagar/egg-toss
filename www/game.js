@@ -536,6 +536,24 @@
       arrow(x - 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
       arrow(x + 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
     }
+    if (b.pulse) {
+      // Orange band with speed stripes: one to three, the faster it goes right now.
+      const bandY = rimY + 22;
+      g.fillStyle = '#ff8c42';
+      g.fillRect(x - b.width * 0.36, bandY - 3.5, b.width * 0.72, 7);
+      const stripes = 1 + Math.round(1 + Math.sin(b.pulse.phase));
+      const dir = b.vx < 0 ? -1 : 1;
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 1.6;
+      for (let k = 0; k < stripes; k++) {
+        const sx = x + dir * (6 - k * 6);
+        g.beginPath();
+        g.moveTo(sx - dir * 3, bandY - 2.5);
+        g.lineTo(sx + dir, bandY);
+        g.lineTo(sx - dir * 3, bandY + 2.5);
+        g.stroke();
+      }
+    }
   }
 
   const EGG_RX = 13;

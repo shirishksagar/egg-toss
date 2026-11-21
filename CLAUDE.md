@@ -57,6 +57,9 @@ Never print, commit or overwrite them; without them no update to the same app ca
   suddenly turns back for `back` = 0.3-0.5 s, then turns again and carries on (go is always more than back,
   so it still crosses the whole screen; turning at fixed times instead could trap a basket on one side).
   It wiggles and its arrows flash red for 0.35 s (`TURN_WARN`) before each turn. Teal band with arrows.
+- **Pulse (levels 31-40, v3):** band mix pulse 2 : turn 1, chance 45% → 70%. Speed swings smoothly between
+  (1 - amp) and (1 + amp) × its normal speed: amp 0.45-0.6, rate 2.2-3.4 rad/s (one swing every 1.8-2.9 s),
+  random start phase. It keeps its direction and never stops. Orange band with 1-3 speed stripes.
 
 ## Starting from a level, saves
 
@@ -81,6 +84,7 @@ Branches are not merged into main.
 | Branch | Version (code) | Levels | Master | Added |
 |---|---|---|---|---|
 | `egg-toss-v2-levels-21-30` | 2.0 (20) | 30 | 31 | Start from a reached level, 50-basket levels, turning baskets, scenes Kite Day … Comet Night |
+| `egg-toss-v3-levels-31-40` | 3.0 (30) | 40 | 41 | Pulsing baskets (speed up and slow down), scenes Butterfly Garden … Neon Night |
 
 ## Shipping a version
 
