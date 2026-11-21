@@ -513,6 +513,36 @@
     return b.x;
   }
 
+  /**
+   * A ghost basket keeps a glowing dashed outline (stronger the fainter the basket is), so
+   * it can always be found, plus a few twinkles around it.
+   */
+  function drawGhostOutline(b, x, alpha) {
+    const rimY = sy(b.y);
+    g.save();
+    g.globalAlpha = 0.35 + 0.55 * (1 - alpha);
+    g.strokeStyle = '#e0e8ff';
+    g.lineWidth = 2;
+    g.setLineDash([5, 4]);
+    g.lineDashOffset = -clock * 12;
+    g.beginPath();
+    g.ellipse(x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI * 2);
+    g.stroke();
+    basketBodyPath(x, rimY, b.width);
+    g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = '#ffffff';
+    for (let k = 0; k < 3; k++) {
+      const a = clock * 2 + k * 2.1 + b.n;
+      const tw = 0.5 + 0.5 * Math.sin(clock * 5 + k * 2);
+      g.globalAlpha = tw * (0.4 + 0.6 * (1 - alpha));
+      g.beginPath();
+      g.arc(x + Math.cos(a) * (b.width / 2 + 6), rimY + 12 + Math.sin(a) * 14, 1.8, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
+  }
+
   /** A small arrow pointing left or right. */
   function arrow(x, y, dir, size, color) {
     g.fillStyle = color;
@@ -906,9 +936,15 @@
     for (let n = first; n <= last; n++) {
       const b = C.basket(state, n);
       const x = basketDrawX(b);
+      const alpha = C.ghostAlpha(b);
+      g.globalAlpha = alpha;
       drawBasketBack(b, x);
+      g.globalAlpha = 1;
       if (egg.mode === 'sitting' && n === state.current) drawEgg(egg.x + x - b.x, sy(egg.y) - 6, false);
+      g.globalAlpha = alpha;
       drawBasketFront(b, x);
+      g.globalAlpha = 1;
+      if (b.ghost) drawGhostOutline(b, x, alpha);
     }
     if (egg.mode === 'flying') drawEgg(egg.x, sy(egg.y) - 6, egg.vy > 0);
     if (crackFx) drawCrack(crackFx);

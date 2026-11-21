@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 70);
-  assert.equal(core.MASTER_LEVEL, 71);
-  assert.equal(core.MASTER_START, 3550);
+  assert.equal(core.LEVELS, 80);
+  assert.equal(core.MASTER_LEVEL, 81);
+  assert.equal(core.MASTER_START, 4050);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -872,4 +872,39 @@ test('wind blows an egg thrown from a windy basket sideways, the same way all th
   // No wind: straight up as always.
   const still = throwFrom(0, 0);
   assert.equal(still.drift, 0);
+});
+
+test('a ghost basket fades in and out but catches the egg even when it is faintest', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  for (const b of all.baskets) {
+    if (!b.ghost) {
+      assert.equal(core.ghostAlpha(b), 1, 'other baskets are fully visible');
+      continue;
+    }
+    assert.ok(core.levelOf(b.n - 1) >= 71, `basket ${b.n}: ghosts start in level 71`);
+  }
+  const s = playing(8);
+  const b = findTrick(s, 'ghost', core.levelStart(71));
+  jumpTo(s, b.n - 1);
+  Object.assign(b.ghost, { rate: Math.PI, phase: 0 });
+  const seen = [];
+  for (let i = 0; i < 120; i++) {
+    core.update(s, FRAME);
+    seen.push(core.ghostAlpha(b));
+  }
+  assert.ok(Math.min(...seen) < core.GHOST_MIN + 0.02 && Math.max(...seen) > 0.98, 'fades all the way in and out');
+  assert.ok(Math.min(...seen) >= core.GHOST_MIN - 1e-9, 'but never vanishes');
+
+  // Faintest moment, frozen there: still a normal catch.
+  Object.assign(b.ghost, { rate: 0, phase: -Math.PI / 2 });
+  assert.ok(Math.abs(core.ghostAlpha(b) - core.GHOST_MIN) < 1e-9);
+  const t = playing(8);
+  const c = findTrick(t, 'ghost', core.levelStart(71));
+  jumpTo(t, c.n - 1);
+  Object.assign(c.ghost, { rate: 0, phase: -Math.PI / 2 });
+  aimNext(t, 0);
+  core.toss(t);
+  const caught = settle(t).find((e) => e.type === 'catch');
+  assert.ok(caught && caught.perfect, 'caught, Perfect even');
 });

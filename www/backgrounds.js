@@ -1450,6 +1450,220 @@
     g.stroke();
   }
 
+  function friendlyGhosts(g, v, { count = 4 } = {}) {
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i + 300) * v.W + v.clock * (10 + i * 4), v.W + 60) - 30;
+      const y = v.H * (0.2 + hash(i + 301) * 0.55) + Math.sin(v.clock * 1.5 + i * 2) * 10;
+      const s = 0.8 + hash(i + 302) * 0.5;
+      g.globalAlpha = 0.55 + 0.35 * Math.sin(v.clock * 1.2 + i);
+      g.fillStyle = '#f8f9ff';
+      g.beginPath();
+      g.arc(x, y, 14 * s, Math.PI, Math.PI * 2);
+      g.lineTo(x + 14 * s, y + 16 * s);
+      for (let k = 0; k <= 4; k++) {
+        const px = x + 14 * s - (k * 28 * s) / 4;
+        g.lineTo(px, y + 16 * s + (k % 2 ? -4 : 0) * s + Math.sin(v.clock * 6 + k + i) * 1.5);
+      }
+      g.closePath();
+      g.fill();
+      g.globalAlpha = 1;
+      g.fillStyle = '#3d3d5c';
+      g.beginPath();
+      g.ellipse(x - 5 * s, y - 2 * s, 2 * s, 3 * s, 0, 0, Math.PI * 2);
+      g.ellipse(x + 5 * s, y - 2 * s, 2 * s, 3 * s, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(255,140,170,0.6)';
+      g.beginPath();
+      g.ellipse(x - 9 * s, y + 4 * s, 2.5 * s, 1.5 * s, 0, 0, Math.PI * 2);
+      g.ellipse(x + 9 * s, y + 4 * s, 2.5 * s, 1.5 * s, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function bats(g, v, { count = 7 } = {}) {
+    g.fillStyle = '#1b1b2f';
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i + 310) * v.W + v.clock * (30 + hash(i + 311) * 30), v.W + 30) - 15;
+      const y = v.H * (0.1 + hash(i + 312) * 0.5) + Math.sin(v.clock * 4 + i * 3) * 8;
+      const flap = Math.sin(v.clock * 14 + i) * 5;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x - 6, y - 6 - flap, x - 13, y - 2 - flap);
+      g.quadraticCurveTo(x - 9, y + 1, x - 6, y + 3);
+      g.quadraticCurveTo(x - 3, y + 1, x, y + 4);
+      g.quadraticCurveTo(x + 3, y + 1, x + 6, y + 3);
+      g.quadraticCurveTo(x + 9, y + 1, x + 13, y - 2 - flap);
+      g.quadraticCurveTo(x + 6, y - 6 - flap, x, y);
+      g.fill();
+    }
+  }
+
+  function crystals(g, v) {
+    const colors = ['#72efdd', '#b8c0ff', '#ffafcc', '#80ffdb'];
+    const spots = [[0.05, 60, 16], [0.18, 95, 22], [0.32, 50, 14], [0.6, 80, 20], [0.75, 120, 26], [0.92, 70, 18]];
+    spots.forEach(([fx, h, w], k) => {
+      const x = v.W * fx;
+      const base = v.H;
+      const glow = 0.5 + 0.5 * Math.sin(v.clock * 1.5 + k);
+      const halo = g.createRadialGradient(x, base - h * 0.6, 2, x, base - h * 0.6, h);
+      halo.addColorStop(0, `rgba(180,255,240,${0.25 * glow})`);
+      halo.addColorStop(1, 'rgba(180,255,240,0)');
+      g.fillStyle = halo;
+      g.fillRect(x - h, base - h * 1.6, h * 2, h * 2);
+      g.fillStyle = colors[k % colors.length];
+      g.beginPath();
+      g.moveTo(x - w / 2, base);
+      g.lineTo(x - w / 2, base - h * 0.7);
+      g.lineTo(x, base - h);
+      g.lineTo(x + w / 2, base - h * 0.7);
+      g.lineTo(x + w / 2, base);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.35)';
+      g.beginPath();
+      g.moveTo(x - w / 2, base - h * 0.7);
+      g.lineTo(x, base - h);
+      g.lineTo(x, base);
+      g.lineTo(x - w / 2, base);
+      g.closePath();
+      g.fill();
+    });
+  }
+
+  function fish(g, v, { count = 8 } = {}) {
+    const colors = ['#ff9f1c', '#ffbf69', '#2ec4b6', '#ff6b6b', '#f15bb5'];
+    for (let i = 0; i < count; i++) {
+      const dir = hash(i + 320) < 0.5 ? -1 : 1;
+      const speed = 20 + hash(i + 321) * 25;
+      const x = wrap(hash(i + 322) * v.W + dir * v.clock * speed, v.W + 40) - 20;
+      const y = v.H * (0.15 + hash(i + 323) * 0.65) + Math.sin(v.clock * 2 + i) * 6;
+      const s = 0.7 + hash(i + 324) * 0.6;
+      const wag = Math.sin(v.clock * 10 + i) * 3 * s;
+      g.fillStyle = colors[i % colors.length];
+      g.beginPath();
+      g.ellipse(x, y, 11 * s, 6 * s, 0, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.moveTo(x - dir * 9 * s, y);
+      g.lineTo(x - dir * 17 * s, y - 6 * s + wag);
+      g.lineTo(x - dir * 17 * s, y + 6 * s + wag);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#1a1a1a';
+      g.beginPath();
+      g.arc(x + dir * 6 * s, y - 1.5 * s, 1.3 * s, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function coral(g, v) {
+    const colors = ['#ff6f91', '#ff9671', '#ffc75f', '#c34a36', '#f9f871'];
+    g.fillStyle = '#e9d8a6';
+    g.fillRect(0, v.H - 18, v.W, 18);
+    for (let k = 0; k < 9; k++) {
+      const x = (k + 0.5) * (v.W / 9);
+      const h = 30 + hash(k + 330) * 45;
+      g.strokeStyle = colors[k % colors.length];
+      g.lineWidth = 5;
+      g.lineCap = 'round';
+      const sway = Math.sin(v.clock * 1.3 + k) * 4;
+      g.beginPath();
+      g.moveTo(x, v.H - 14);
+      g.lineTo(x + sway, v.H - 14 - h);
+      g.moveTo(x + sway * 0.5, v.H - 14 - h * 0.5);
+      g.lineTo(x - 10 + sway, v.H - 14 - h * 0.8);
+      g.moveTo(x + sway * 0.6, v.H - 14 - h * 0.6);
+      g.lineTo(x + 11 + sway, v.H - 14 - h * 0.9);
+      g.stroke();
+    }
+    g.lineCap = 'butt';
+  }
+
+  function fireworks(g, v) {
+    const colors = ['255,90,95', '255,202,58', '138,201,38', '25,130,196', '199,125,255'];
+    for (let i = 0; i < 4; i++) {
+      const period = 2.4 + hash(i + 340) * 1.2;
+      const t = (v.clock + i * 0.7) % period;
+      const round = Math.floor((v.clock + i * 0.7) / period);
+      const cx = v.W * (0.15 + hash(i * 3 + round) * 0.7);
+      const cy = v.H * (0.12 + hash(i * 5 + round + 1) * 0.35);
+      const c = colors[(i + round) % colors.length];
+      if (t < 0.5) {
+        const y = v.H - (v.H - cy) * (t / 0.5);
+        g.fillStyle = `rgba(${c},0.9)`;
+        g.beginPath();
+        g.arc(cx, y, 2, 0, Math.PI * 2);
+        g.fill();
+      } else if (t < 1.8) {
+        const k = (t - 0.5) / 1.3;
+        const r = 10 + k * 45;
+        g.fillStyle = `rgba(${c},${1 - k})`;
+        for (let s = 0; s < 14; s++) {
+          const a = (s / 14) * Math.PI * 2;
+          g.beginPath();
+          g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r + k * k * 20, 2.2, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    }
+  }
+
+  function gear(g, x, y, r, teeth, angle, color) {
+    g.fillStyle = color;
+    g.beginPath();
+    for (let k = 0; k < teeth * 2; k++) {
+      const a = angle + (k * Math.PI) / teeth;
+      const rr = k % 2 ? r : r * 1.18;
+      g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    g.closePath();
+    g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    g.beginPath();
+    g.arc(x, y, r * 0.35, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  function gears(g, v) {
+    gear(g, v.W * 0.15, v.H * 0.25, 30, 10, v.clock * 0.6, 'rgba(205,140,70,0.55)');
+    gear(g, v.W * 0.15 + 52, v.H * 0.25 + 22, 20, 8, -v.clock * 0.9 + 0.2, 'rgba(230,180,90,0.55)');
+    gear(g, v.W * 0.85, v.H * 0.62, 40, 12, -v.clock * 0.45, 'rgba(180,120,60,0.5)');
+    gear(g, v.W * 0.85 - 60, v.H * 0.62 - 30, 22, 8, v.clock * 0.8, 'rgba(230,180,90,0.5)');
+  }
+
+  function dinos(g, v) {
+    const base = v.H * 0.92;
+    g.fillStyle = '#6a994e';
+    g.fillRect(0, base, v.W, v.H - base);
+    for (const [fx, s, dir] of [[0.28, 1, 1], [0.72, 0.75, -1]]) {
+      const x = v.W * fx + Math.sin(v.clock * 0.3 + fx * 7) * 10;
+      const bob = Math.abs(Math.sin(v.clock * 3 + fx * 5)) * 2;
+      g.fillStyle = dir > 0 ? '#2a9d8f' : '#e76f51';
+      g.beginPath();
+      g.ellipse(x, base - 22 * s - bob, 30 * s, 16 * s, 0, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.moveTo(x + dir * 18 * s, base - 30 * s - bob);
+      g.quadraticCurveTo(x + dir * 30 * s, base - 70 * s - bob, x + dir * 40 * s, base - 72 * s - bob);
+      g.lineTo(x + dir * 44 * s, base - 64 * s - bob);
+      g.quadraticCurveTo(x + dir * 30 * s, base - 50 * s - bob, x + dir * 28 * s, base - 22 * s - bob);
+      g.closePath();
+      g.fill();
+      g.beginPath();
+      g.moveTo(x - dir * 26 * s, base - 24 * s - bob);
+      g.quadraticCurveTo(x - dir * 50 * s, base - 22 * s - bob, x - dir * 60 * s, base - 8 * s);
+      g.lineTo(x - dir * 22 * s, base - 14 * s - bob);
+      g.closePath();
+      g.fill();
+      g.fillRect(x - 16 * s, base - 12 * s - bob, 7 * s, 12 * s + bob);
+      g.fillRect(x + 9 * s, base - 12 * s - bob, 7 * s, 12 * s + bob);
+      g.fillStyle = '#1a1a1a';
+      g.beginPath();
+      g.arc(x + dir * 41 * s, base - 69 * s - bob, 1.6 * s, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -1598,6 +1812,27 @@
       deco: (g, v) => { cloudStreaks(g, v, { color: 'rgba(255,255,255,0.6)', speed: 150 }); windmills(g, v); leaves(g, v, { count: 26 }); } },
     { name: 'Storm Front', top: '#1b263b', bottom: '#5c677d',
       deco: (g, v) => { clouds(g, v, { color: 'rgba(60,70,85,0.9)', size: 1.5, spacing: 130 }); cloudStreaks(g, v, { color: 'rgba(150,160,180,0.4)', speed: 220 }); slantRain(g, v); lightning(g, v); } },
+    // Levels 71-80 (v7): ghost baskets.
+    { name: 'Friendly Ghosts', top: '#2b2d42', bottom: '#6d597a',
+      deco: (g, v) => { stars(g, v, { count: 40, alpha: 0.7 }); moon(g, v, { x: 0.8, y: 0.14, r: 24 }); friendlyGhosts(g, v); } },
+    { name: 'Bat Cave Dusk', top: '#3c1642', bottom: '#f4845f',
+      deco: (g, v) => { crescent(g, v, { x: 0.25, y: 0.2, r: 24, face: false }); treeline(g, v, { color: '#2a0f2e', height: 0.2 }); bats(g, v); } },
+    { name: 'Crystal Cavern', top: '#0b2027', bottom: '#40798c',
+      deco: (g, v) => { sparkles(g, v, { count: 30, color: '190,255,240' }); crystals(g, v); } },
+    { name: 'Coral Reef', top: '#0096c7', bottom: '#90e0ef',
+      deco: (g, v) => { bubbles(g, v, { count: 18 }); fish(g, v); coral(g, v); } },
+    { name: 'Fireworks Night', top: '#03045e', bottom: '#3a0ca3',
+      deco: (g, v) => { stars(g, v, { count: 30, alpha: 0.6 }); fireworks(g, v); skyline(g, v, { color: '#10002b' }); } },
+    { name: 'Clockwork Sky', top: '#bc6c25', bottom: '#fefae0',
+      deco: (g, v) => { gears(g, v); clouds(g, v, { color: 'rgba(255,245,225,0.7)' }); birds(g, v, { count: 3, color: 'rgba(90,50,20,0.5)' }); } },
+    { name: 'Dino Valley', top: '#ffb703', bottom: '#fff1c1',
+      deco: (g, v) => { sun(g, v, { x: 0.8, y: 0.15, r: 32 }); palmTrees(g, v); dinos(g, v); } },
+    { name: 'Foggy Harbor', top: '#8d99ae', bottom: '#edf2f4',
+      deco: (g, v) => { sea(g, v, { color: '#6c7a89', foam: 'rgba(255,255,255,0.5)', level: 0.8 }); lighthouse(g, v); mist(g, v, { alpha: 0.4 }); } },
+    { name: 'Moonlit Lake', top: '#001d3d', bottom: '#003566',
+      deco: (g, v) => { stars(g, v, { count: 50 }); moon(g, v, { x: 0.5, y: 0.25, r: 32 }); sea(g, v, { color: '#002855', foam: 'rgba(255,240,200,0.35)', level: 0.82 }); reeds(g, v); fireflies(g, v, { count: 14 }); } },
+    { name: 'Wisp Woods', top: '#081c15', bottom: '#2d6a4f',
+      deco: (g, v) => { mist(g, v, { color: '200,255,230', alpha: 0.18 }); treeline(g, v, { color: '#04140d', height: 0.32 }); fireflies(g, v, { count: 24, color: '140,220,255' }); friendlyGhosts(g, v, { count: 2 }); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

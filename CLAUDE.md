@@ -75,6 +75,11 @@ Never print, commit or overwrite them; without them no update to the same app ca
   to aim from, and two baskets moving in step could otherwise keep a drifting egg from ever landing (the
   bot found that). A flag on the basket blows the wind's way; while the egg is in a windy basket, wind
   streaks cross the screen and an arrow under the eggs shows the direction and strength.
+- **Ghost (levels 71-80, v7):** band mix ghost 3 : wind 1 : nap 1 : grow 1 : pulse 1 : turn 1, chance
+  55% → 78%. Fades in and out once every 2π / rate seconds (rate 1.5-2.5 rad/s); `ghostAlpha(b)` goes from
+  `GHOST_MIN` = 0.15 to 1. Only the look changes: it catches exactly like a normal basket, even when
+  faintest. game.js draws it at that alpha plus a dashed glowing outline and twinkles that get stronger as
+  it fades, so it can always be found.
 
 ## Starting from a level, saves
 
@@ -103,6 +108,7 @@ Branches are not merged into main.
 | `egg-toss-v4-levels-41-50` | 4.0 (40) | 50 | 51 | Growing baskets (catch width changes), scenes Hot Air Valley … Glacier Glow |
 | `egg-toss-v5-levels-51-60` | 5.0 (50) | 60 | 61 | Sleepy baskets (stop for a nap, then go on), scenes Counting Sheep … Pillow Clouds |
 | `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | 71 | Wind that pushes the flying egg sideways (flag + arrow), scenes Pinwheel Park … Storm Front |
+| `egg-toss-v7-levels-71-80` | 7.0 (70) | 80 | 81 | Ghost baskets (fade in and out, always catch), scenes Friendly Ghosts … Wisp Woods |
 
 ## Shipping a version
 

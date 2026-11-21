@@ -54,7 +54,7 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 70;           // normal levels
+  const LEVELS = 80;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
@@ -63,6 +63,7 @@
   const TURN_WARN = 0.35;      // seconds a turning basket wiggles before it turns
   const NAP_WARN = 0.3;        // seconds a napping basket blinks awake before it goes on
   const WIND_SLOW = [0.5, 0.75]; // a windy basket moves at this share of its speed (even, odd number)
+  const GHOST_MIN = 0.15;      // a ghost basket is never fainter than this
   const GROW_MID = 1.15;       // a growing basket's width swings around this × its normal width
 
   /**
@@ -77,6 +78,7 @@
     { from: 41, to: 50, tricks: [['grow', 2], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.72] },
     { from: 51, to: 60, tricks: [['nap', 2], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.75] },
     { from: 61, to: 70, tricks: [['wind', 3], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.75] },
+    { from: 71, to: 80, tricks: [['ghost', 3], ['wind', 1], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.78] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
@@ -86,6 +88,7 @@
     grow: { first: 41, tip: 'Stretchy baskets grow and shrink!' },
     nap: { first: 51, tip: 'Sleepy baskets stop for a nap!' },
     wind: { first: 61, tip: 'Wind blows the egg: watch the arrow!' },
+    ghost: { first: 71, tip: 'Ghost baskets fade, but still catch!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -113,7 +116,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 3550
+  const MASTER_START = levelEnd(LEVELS); // 4050
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -233,10 +236,21 @@
       b.wind = nextRandom(state) < 0.5 ? -strength : strength;
       b.vx *= WIND_SLOW[b.n % 2];
     },
+    // Fades in and out (see ghostAlpha) once every 2π / rate seconds. Only its look changes:
+    // it catches the egg just the same, even when it is faintest.
+    ghost(state, b) {
+      b.ghost = { rate: 1.5 + nextRandom(state) * 1.0, phase: nextRandom(state) * Math.PI * 2 };
+    },
   };
 
   function growWidth(grow) {
     return grow.base * (GROW_MID + grow.amp * Math.sin(grow.phase));
+  }
+
+  /** How visible a basket is, from GHOST_MIN to 1 (always 1 for a basket that is not a ghost). */
+  function ghostAlpha(b) {
+    if (!b.ghost) return 1;
+    return GHOST_MIN + (1 - GHOST_MIN) * (0.5 + 0.5 * Math.sin(b.ghost.phase));
   }
 
   function addTricks(state, b, level) {
@@ -364,6 +378,7 @@
       const min = b.width / 2 + SIDE_MARGIN; // growing near a wall pushes it back inside
       b.x = Math.min(WORLD_W - min, Math.max(min, b.x));
     }
+    if (b.ghost) b.ghost.phase = (b.ghost.phase + b.ghost.rate * dt) % (Math.PI * 2);
   }
 
   /** How far the egg is from a basket's centre, or null if it would miss the basket. */
@@ -523,8 +538,8 @@
 
   return {
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
-    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW,
+    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW, GHOST_MIN,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
-    cameraTarget, groundY, trickChance, trickTip, migrateSave,
+    cameraTarget, groundY, trickChance, trickTip, migrateSave, ghostAlpha,
   };
 });
