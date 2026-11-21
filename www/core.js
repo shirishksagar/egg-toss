@@ -54,13 +54,14 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 50;           // normal levels
+  const LEVELS = 60;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
   // the end of level 100. The tricks bring the challenge.
   const LATE_SPEED_RISE = 65 / 4000;
   const TURN_WARN = 0.35;      // seconds a turning basket wiggles before it turns
+  const NAP_WARN = 0.3;        // seconds a napping basket blinks awake before it goes on
   const GROW_MID = 1.15;       // a growing basket's width swings around this × its normal width
 
   /**
@@ -73,6 +74,7 @@
     { from: 21, to: 30, tricks: [['turn', 1]], chance: [0.35, 0.65] },
     { from: 31, to: 40, tricks: [['pulse', 2], ['turn', 1]], chance: [0.45, 0.7] },
     { from: 41, to: 50, tricks: [['grow', 2], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.72] },
+    { from: 51, to: 60, tricks: [['nap', 2], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.75] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
@@ -80,6 +82,7 @@
     turn: { first: 21, tip: 'Wiggly baskets suddenly turn back!' },
     pulse: { first: 31, tip: 'Zoomy baskets speed up and slow down!' },
     grow: { first: 41, tip: 'Stretchy baskets grow and shrink!' },
+    nap: { first: 51, tip: 'Sleepy baskets stop for a nap!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -107,7 +110,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 2550
+  const MASTER_START = levelEnd(LEVELS); // 3050
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -212,6 +215,11 @@
       };
       b.width = growWidth(b.grow);
     },
+    // Moves for `awake` seconds, then stops for a `sleep` second nap, then goes on.
+    nap(state, b) {
+      const awake = 1.2 + nextRandom(state) * 1.0;
+      b.nap = { awake, sleep: 0.7 + nextRandom(state) * 0.4, left: awake * (0.3 + 0.7 * nextRandom(state)), asleep: false };
+    },
   };
 
   function growWidth(grow) {
@@ -302,7 +310,7 @@
     for (let n = from; n <= to; n++) {
       const b = basket(state, n);
       stepTricks(b, dt);
-      if (b.vx === 0) continue;
+      if (b.vx === 0 || (b.nap && b.nap.asleep)) continue; // frozen, or napping
       b.x += b.vx * dt;
       const min = b.width / 2 + SIDE_MARGIN;
       const max = WORLD_W - min;
@@ -313,6 +321,14 @@
 
   /** Runs a basket's tricks for dt seconds (a frozen basket, vx 0, stays frozen). */
   function stepTricks(b, dt) {
+    const nap = b.nap;
+    if (nap) {
+      nap.left -= dt;
+      if (nap.left <= 0) {
+        nap.asleep = !nap.asleep;
+        nap.left += nap.asleep ? nap.sleep : nap.awake;
+      }
+    }
     const turn = b.turn;
     if (turn) {
       turn.left -= dt;
@@ -492,7 +508,7 @@
 
   return {
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
-    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID,
+    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
     cameraTarget, groundY, trickChance, trickTip, migrateSave,
   };

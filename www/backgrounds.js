@@ -955,6 +955,270 @@
     }
   }
 
+  function sheep(g, v) {
+    // Fluffy sheep hopping over a fence, one after another.
+    const ground = v.H * 0.9;
+    g.fillStyle = 'rgba(70,110,60,0.9)';
+    g.fillRect(0, ground, v.W, v.H - ground);
+    const fx = v.W * 0.5;
+    g.strokeStyle = '#a0764b';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(fx - 22, ground); g.lineTo(fx - 22, ground - 26);
+    g.moveTo(fx + 22, ground); g.lineTo(fx + 22, ground - 26);
+    g.moveTo(fx - 28, ground - 10); g.lineTo(fx + 28, ground - 10);
+    g.moveTo(fx - 28, ground - 21); g.lineTo(fx + 28, ground - 21);
+    g.stroke();
+    for (let k = 0; k < 3; k++) {
+      const t = (v.clock * 0.22 + k / 3) % 1;
+      const x = -30 + t * (v.W + 60);
+      const hop = Math.max(0, 1 - Math.pow((x - fx) / 70, 2));
+      const y = ground - 12 - hop * 50 - Math.abs(Math.sin(v.clock * 8 + k)) * 2;
+      g.fillStyle = '#ffffff';
+      for (const [dx, dy, r] of [[-8, 0, 8], [0, -4, 9], [8, 0, 8], [0, 3, 8]]) {
+        g.beginPath();
+        g.arc(x + dx, y + dy, r, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = '#3b3b3b';
+      g.beginPath();
+      g.ellipse(x + 15, y - 2, 5, 4, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillRect(x - 7, y + 8, 2.5, 8);
+      g.fillRect(x + 6, y + 8, 2.5, 8);
+    }
+  }
+
+  function crescent(g, v, { x = 0.75, y = 0.18, r = 28, face = true } = {}) {
+    const cx = v.W * x;
+    const cy = v.H * y;
+    const halo = g.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 2.8);
+    halo.addColorStop(0, 'rgba(255,240,180,0.3)');
+    halo.addColorStop(1, 'rgba(255,240,180,0)');
+    g.fillStyle = halo;
+    g.fillRect(cx - r * 3, cy - r * 3, r * 6, r * 6);
+    g.fillStyle = '#ffe9a0';
+    g.beginPath();
+    g.arc(cx, cy, r, Math.PI * 0.35, Math.PI * 1.65, false);
+    g.arc(cx + r * 0.45, cy - r * 0.1, r * 0.82, Math.PI * 1.5, Math.PI * 0.45, true);
+    g.closePath();
+    g.fill();
+    if (face) {
+      g.strokeStyle = '#b8902f';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(cx - r * 0.5, cy - r * 0.15, r * 0.14, 0.1 * Math.PI, 0.9 * Math.PI);
+      g.stroke();
+      g.beginPath();
+      g.arc(cx - r * 0.45, cy + r * 0.3, r * 0.16, 0.2 * Math.PI, 0.8 * Math.PI);
+      g.stroke();
+    }
+  }
+
+  function owls(g, v) {
+    const y = v.H * 0.72;
+    g.strokeStyle = '#2b1b10';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(-10, y + 12);
+    g.quadraticCurveTo(v.W * 0.5, y + 2, v.W + 10, y + 16);
+    g.stroke();
+    for (const fx of [0.25, 0.5, 0.78]) {
+      const x = v.W * fx;
+      const blink = Math.sin(v.clock * 0.9 + fx * 20) > 0.97;
+      g.fillStyle = '#5a3d2b';
+      g.beginPath();
+      g.ellipse(x, y - 8, 11, 15, 0, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.moveTo(x - 10, y - 18); g.lineTo(x - 7, y - 27); g.lineTo(x - 3, y - 20);
+      g.moveTo(x + 10, y - 18); g.lineTo(x + 7, y - 27); g.lineTo(x + 3, y - 20);
+      g.fill();
+      for (const ex of [x - 5, x + 5]) {
+        g.fillStyle = '#ffe066';
+        g.beginPath();
+        if (blink) g.fillRect(ex - 3.5, y - 13, 7, 1.5);
+        else g.arc(ex, y - 12, 3.8, 0, Math.PI * 2);
+        g.fill();
+        if (!blink) {
+          g.fillStyle = '#1a1a1a';
+          g.beginPath();
+          g.arc(ex, y - 12, 1.6, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+      g.fillStyle = '#f4a261';
+      g.beginPath();
+      g.moveTo(x - 2, y - 8); g.lineTo(x + 2, y - 8); g.lineTo(x, y - 4);
+      g.fill();
+    }
+  }
+
+  function tulips(g, v) {
+    const colors = ['#ff4d6d', '#ffd60a', '#ff8fab', '#f77f00', '#c77dff'];
+    const rows = [[0.86, 9, 1], [0.92, 11, 1.15], [0.98, 13, 1.3]];
+    rows.forEach(([fy, step, s], row) => {
+      const y = v.H * fy;
+      for (let x = 4 + row * 5; x < v.W; x += step * 2) {
+        const sway = Math.sin(v.clock * 1.5 + x * 0.1) * 1.5;
+        g.strokeStyle = '#3a7d44';
+        g.lineWidth = 1.2;
+        g.beginPath();
+        g.moveTo(x, y + 14);
+        g.lineTo(x + sway, y);
+        g.stroke();
+        g.fillStyle = colors[Math.floor(hash(x + row * 50) * colors.length)];
+        g.beginPath();
+        g.moveTo(x + sway - 4 * s, y - 6 * s);
+        g.lineTo(x + sway - 2 * s, y - 2 * s);
+        g.lineTo(x + sway, y - 6 * s);
+        g.lineTo(x + sway + 2 * s, y - 2 * s);
+        g.lineTo(x + sway + 4 * s, y - 6 * s);
+        g.quadraticCurveTo(x + sway + 4 * s, y + 2 * s, x + sway, y + 2 * s);
+        g.quadraticCurveTo(x + sway - 4 * s, y + 2 * s, x + sway - 4 * s, y - 6 * s);
+        g.fill();
+      }
+    });
+  }
+
+  function cacti(g, v, { color = '#2d6a4f' } = {}) {
+    for (const [fx, h] of [[0.12, 70], [0.42, 46], [0.8, 86]]) {
+      const x = v.W * fx;
+      const base = v.H * 0.9;
+      g.strokeStyle = color;
+      g.lineCap = 'round';
+      g.lineWidth = 12;
+      g.beginPath();
+      g.moveTo(x, base); g.lineTo(x, base - h);
+      g.stroke();
+      g.lineWidth = 8;
+      g.beginPath();
+      g.moveTo(x, base - h * 0.45); g.lineTo(x - 14, base - h * 0.45); g.lineTo(x - 14, base - h * 0.75);
+      g.moveTo(x, base - h * 0.6); g.lineTo(x + 13, base - h * 0.6); g.lineTo(x + 13, base - h * 0.85);
+      g.stroke();
+    }
+    g.lineCap = 'butt';
+  }
+
+  function mushrooms(g, v) {
+    const base = v.H * 0.92;
+    for (const [fx, s, cap] of [[0.1, 1, '#e63946'], [0.3, 0.7, '#f4a261'], [0.62, 1.3, '#e63946'], [0.88, 0.8, '#9d4edd']]) {
+      const x = v.W * fx;
+      g.fillStyle = '#f1e3c8';
+      g.fillRect(x - 5 * s, base - 22 * s, 10 * s, 22 * s);
+      g.fillStyle = cap;
+      g.beginPath();
+      g.ellipse(x, base - 22 * s, 22 * s, 15 * s, 0, Math.PI, Math.PI * 2);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      for (const [dx, dy, r] of [[-10, -6, 3], [2, -11, 3.5], [11, -5, 2.5]]) {
+        g.beginPath();
+        g.arc(x + dx * s, base - 22 * s + dy * s, r * s, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  function dragonflies(g, v, { count = 6 } = {}) {
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i) * v.W + Math.sin(v.clock * 0.7 + i) * 60 + v.clock * 10, v.W + 20) - 10;
+      const y = v.H * (0.4 + hash(i + 5) * 0.4) + Math.sin(v.clock * 3 + i * 2) * 8;
+      const flick = Math.abs(Math.sin(v.clock * 25 + i));
+      g.fillStyle = `rgba(200,240,255,${0.35 + flick * 0.35})`;
+      for (const side of [-1, 1]) {
+        g.beginPath();
+        g.ellipse(x - 2, y + side * 5, 7, 2.2, side * 0.3, 0, Math.PI * 2);
+        g.ellipse(x + 3, y + side * 5, 6, 2, -side * 0.3, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.strokeStyle = i % 2 ? '#2ec4b6' : '#4361ee';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(x - 10, y); g.lineTo(x + 8, y);
+      g.stroke();
+    }
+  }
+
+  function reeds(g, v) {
+    g.strokeStyle = '#4f772d';
+    g.lineWidth = 2;
+    for (let i = 0; i < 26; i++) {
+      const x = hash(i + 200) * v.W;
+      const h = 30 + hash(i + 201) * 40;
+      const sway = Math.sin(v.clock * 1.2 + i) * 4;
+      g.beginPath();
+      g.moveTo(x, v.H);
+      g.quadraticCurveTo(x, v.H - h * 0.6, x + sway, v.H - h);
+      g.stroke();
+      if (i % 3 === 0) {
+        g.fillStyle = '#7f4f24';
+        g.beginPath();
+        g.ellipse(x + sway, v.H - h, 2.5, 7, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  function pumpkins(g, v) {
+    const base = v.H * 0.94;
+    for (const [fx, s] of [[0.15, 1], [0.45, 1.4], [0.8, 0.9]]) {
+      const x = v.W * fx;
+      g.fillStyle = '#f77f00';
+      for (const dx of [-9, 9, 0]) {
+        g.beginPath();
+        g.ellipse(x + dx * s, base - 12 * s, 11 * s, 13 * s, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = '#386641';
+      g.fillRect(x - 2 * s, base - 30 * s, 4 * s, 7 * s);
+      const glow = 0.6 + 0.4 * Math.sin(v.clock * 5 + fx * 10);
+      g.fillStyle = `rgba(255,230,120,${glow})`;
+      g.beginPath();
+      g.moveTo(x - 8 * s, base - 16 * s); g.lineTo(x - 4 * s, base - 20 * s); g.lineTo(x - 2 * s, base - 15 * s);
+      g.moveTo(x + 8 * s, base - 16 * s); g.lineTo(x + 4 * s, base - 20 * s); g.lineTo(x + 2 * s, base - 15 * s);
+      g.moveTo(x - 7 * s, base - 9 * s); g.lineTo(x + 7 * s, base - 9 * s); g.lineTo(x, base - 5 * s);
+      g.fill();
+    }
+  }
+
+  function snowmen(g, v) {
+    const base = v.H * 0.92;
+    g.fillStyle = '#f8fbff';
+    g.beginPath();
+    g.moveTo(0, v.H);
+    for (let x = 0; x <= v.W; x += 20) g.lineTo(x, base + Math.sin(x * 0.02) * 8);
+    g.lineTo(v.W, v.H);
+    g.closePath();
+    g.fill();
+    for (const [fx, s] of [[0.22, 1], [0.7, 1.25]]) {
+      const x = v.W * fx;
+      g.fillStyle = '#ffffff';
+      g.strokeStyle = 'rgba(150,170,200,0.6)';
+      g.lineWidth = 1;
+      for (const [dy, r] of [[-12, 15], [-36, 11], [-54, 8]]) {
+        g.beginPath();
+        g.arc(x, base + dy * s, r * s, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+      }
+      g.fillStyle = '#222';
+      g.beginPath();
+      g.arc(x - 3 * s, base - 56 * s, 1.3 * s, 0, Math.PI * 2);
+      g.arc(x + 3 * s, base - 56 * s, 1.3 * s, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#f77f00';
+      g.beginPath();
+      g.moveTo(x, base - 53 * s); g.lineTo(x + 9 * s, base - 52 * s); g.lineTo(x, base - 51 * s);
+      g.fill();
+      g.fillStyle = '#d62828';
+      g.fillRect(x - 9 * s, base - 47 * s, 18 * s, 4 * s);
+      g.fillStyle = '#222';
+      g.fillRect(x - 7 * s, base - 70 * s, 14 * s, 9 * s);
+      g.fillRect(x - 10 * s, base - 62 * s, 20 * s, 2 * s);
+    }
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -1061,6 +1325,27 @@
       deco: (g, v) => { treeline(g, v, { color: '#1b4332', height: 0.3 }); mist(g, v); rain(g, v, { count: 50, color: 'rgba(220,255,230,0.5)' }); } },
     { name: 'Glacier Glow', top: '#03122b', bottom: '#14506b',
       deco: (g, v) => { stars(g, v, { count: 45 }); aurora(g, v); mountains(g, v, { color: '#2a4d69', snowCap: true }); } },
+    // Levels 51-60 (v5): sleepy baskets.
+    { name: 'Counting Sheep', top: '#283c86', bottom: '#8e9eab',
+      deco: (g, v) => { stars(g, v, { count: 30, alpha: 0.7 }); crescent(g, v); sheep(g, v); } },
+    { name: 'Owl Woods', top: '#14213d', bottom: '#3d5a80',
+      deco: (g, v) => { stars(g, v, { count: 25, alpha: 0.6 }); moon(g, v, { x: 0.2, y: 0.15, r: 22 }); treeline(g, v, { color: '#0d1b2a', height: 0.25 }); owls(g, v); } },
+    { name: 'Tulip Fields', top: '#8fd3fe', bottom: '#fefae0',
+      deco: (g, v) => { sun(g, v, { x: 0.2, y: 0.14, r: 30 }); clouds(g, v, { size: 0.9 }); windmills(g, v, { color: 'rgba(240,230,215,0.8)' }); tulips(g, v); } },
+    { name: 'Cactus Canyon', top: '#f8961e', bottom: '#ffd6a5',
+      deco: (g, v) => { sun(g, v, { x: 0.75, y: 0.2, r: 38, color: '#fff3b0' }); dunes(g, v, { colors: ['#e76f51', '#d35d3e', '#b5452c'] }); cacti(g, v); } },
+    { name: 'Mushroom Glade', top: '#3a0ca3', bottom: '#7b6fd6',
+      deco: (g, v) => { mist(g, v, { color: '200,190,255', alpha: 0.2 }); treeline(g, v, { color: '#240a5c', height: 0.2 }); mushrooms(g, v); fireflies(g, v, { count: 18, color: '190,255,230' }); } },
+    { name: 'Dragonfly Pond', top: '#90e0ef', bottom: '#e9f5db',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.7)', size: 0.8 }); sea(g, v, { color: '#52b69a', foam: 'rgba(230,255,240,0.6)', level: 0.84 }); reeds(g, v); dragonflies(g, v); } },
+    { name: 'Pumpkin Patch', top: '#3c096c', bottom: '#ff9e00',
+      deco: (g, v) => { moon(g, v, { x: 0.7, y: 0.2, r: 30 }); leaves(g, v, { count: 14 }); pumpkins(g, v); } },
+    { name: 'Snowman Hill', top: '#bde0fe', bottom: '#f1f8ff',
+      deco: (g, v) => { snow(g, v, { count: 70 }); snowmen(g, v); } },
+    { name: 'Sleepy Moon', top: '#0b132b', bottom: '#3a506b',
+      deco: (g, v) => { stars(g, v, { count: 60 }); crescent(g, v, { x: 0.5, y: 0.3, r: 60 }); clouds(g, v, { color: 'rgba(170,185,220,0.35)', size: 1.2 }); } },
+    { name: 'Pillow Clouds', top: '#cdb4db', bottom: '#fff1f8',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.92)', size: 1.7, spacing: 110, parallax: 0.5 }); sparkles(g, v, { count: 20, color: '255,255,255' }); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

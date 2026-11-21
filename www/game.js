@@ -549,6 +549,35 @@
         arrow(ax, rimY, growing ? side : -side, 4.5, '#b06cff');
       }
     }
+    if (b.nap) {
+      // Blue band with a face: eyes shut and floating z's while it naps, blinking just before it wakes.
+      const bandY = rimY + 13;
+      g.fillStyle = '#5b8def';
+      g.fillRect(x - b.width * 0.42, bandY - 4.5, b.width * 0.84, 9);
+      const asleep = b.nap.asleep && !(b.nap.left < C.NAP_WARN && Math.sin(clock * 40) > 0);
+      g.strokeStyle = '#ffffff';
+      g.fillStyle = '#ffffff';
+      g.lineWidth = 1.6;
+      for (const ex of [x - 7, x + 7]) {
+        g.beginPath();
+        if (asleep) g.arc(ex, bandY - 1, 3, 0.15 * Math.PI, 0.85 * Math.PI);
+        else g.arc(ex, bandY, 2.2, 0, Math.PI * 2);
+        if (asleep) g.stroke();
+        else g.fill();
+      }
+      if (b.nap.asleep) {
+        g.font = '900 12px "Trebuchet MS", system-ui, sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        for (let k = 0; k < 3; k++) {
+          const t = (clock * 0.9 + k / 3) % 1;
+          g.globalAlpha = 1 - t;
+          g.fillStyle = '#e8f0ff';
+          g.fillText('z', x + b.width / 2 + 4 + t * 10, rimY - 8 - t * 26);
+        }
+        g.globalAlpha = 1;
+      }
+    }
     if (b.pulse) {
       // Orange band with speed stripes: one to three, the faster it goes right now.
       const bandY = rimY + 22;

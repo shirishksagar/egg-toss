@@ -64,6 +64,10 @@ Never print, commit or overwrite them; without them no update to the same app ca
   between (1.15 - amp) and (1.15 + amp) × its normal width (`GROW_MID`): amp 0.3-0.4, rate 1.8-2.8 rad/s,
   random start phase, so a 56 basket is about 42-87 wide. A catch uses the width at that moment. Growing
   next to a wall pushes the basket back inside. Purple rim, with arrows pointing out (growing) or in.
+- **Nap (levels 51-60, v5):** band mix nap 2 : grow 1 : pulse 1 : turn 1, chance 50% → 75%. Moves for
+  `awake` = 1.2-2.2 s, then stops for a `sleep` = 0.7-1.1 s nap, then goes on (it keeps its speed and
+  direction). Blue band with a face: shut eyes and floating z's while napping, blinking for 0.3 s
+  (`NAP_WARN`) before it wakes.
 
 ## Starting from a level, saves
 
@@ -90,6 +94,7 @@ Branches are not merged into main.
 | `egg-toss-v2-levels-21-30` | 2.0 (20) | 30 | 31 | Start from a reached level, 50-basket levels, turning baskets, scenes Kite Day … Comet Night |
 | `egg-toss-v3-levels-31-40` | 3.0 (30) | 40 | 41 | Pulsing baskets (speed up and slow down), scenes Butterfly Garden … Neon Night |
 | `egg-toss-v4-levels-41-50` | 4.0 (40) | 50 | 51 | Growing baskets (catch width changes), scenes Hot Air Valley … Glacier Glow |
+| `egg-toss-v5-levels-51-60` | 5.0 (50) | 60 | 61 | Sleepy baskets (stop for a nap, then go on), scenes Counting Sheep … Pillow Clouds |
 
 ## Shipping a version
 

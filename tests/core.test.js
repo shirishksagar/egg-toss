@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 50);
-  assert.equal(core.MASTER_LEVEL, 51);
-  assert.equal(core.MASTER_START, 2550);
+  assert.equal(core.LEVELS, 60);
+  assert.equal(core.MASTER_LEVEL, 61);
+  assert.equal(core.MASTER_START, 3050);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -795,4 +795,31 @@ test('a growing basket catches with the width it has at that moment', () => {
     assert.ok(d.x - d.width / 2 >= 0 && d.x + d.width / 2 <= core.WORLD_W, 'inside the screen');
   }
   assert.ok(Math.max(...widths) > d.grow.base * 1.5 && Math.min(...widths) < d.grow.base * 0.8);
+});
+
+test('a sleepy basket stops for a short nap, then goes on', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  for (const b of all.baskets) {
+    if (!b.nap) continue;
+    assert.ok(core.levelOf(b.n - 1) >= 51, `basket ${b.n}: napping starts in level 51`);
+    assert.ok(b.nap.sleep <= 1.1 && b.nap.awake >= 1.2, 'short naps, longer awake');
+  }
+  const s = playing(8);
+  const b = findTrick(s, 'nap', core.levelStart(51));
+  jumpTo(s, b.n - 1);
+  b.x = core.WORLD_W / 2;
+  Object.assign(b.nap, { awake: 1, sleep: 0.5, left: 0.1, asleep: false });
+  let x = b.x;
+  core.update(s, 0.05);
+  assert.notEqual(b.x, x, 'awake: moving');
+  core.update(s, 0.1);
+  assert.equal(b.nap.asleep, true, 'fell asleep');
+  x = b.x;
+  core.update(s, 0.3);
+  assert.equal(b.x, x, 'stands still while napping');
+  assert.notEqual(b.vx, 0, 'but keeps its speed for later');
+  core.update(s, 0.2);
+  assert.equal(b.nap.asleep, false, 'woke up after 0.5 s');
+  assert.notEqual(b.x, x, 'and goes on');
 });
