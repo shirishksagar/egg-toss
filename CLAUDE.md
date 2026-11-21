@@ -110,6 +110,9 @@ Branches are not merged into main.
 | `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | 71 | Wind that pushes the flying egg sideways (flag + arrow), scenes Pinwheel Park … Storm Front |
 | `egg-toss-v7-levels-71-80` | 7.0 (70) | 80 | 81 | Ghost baskets (fade in and out, always catch), scenes Friendly Ghosts … Wisp Woods |
 
+Planned but not made yet: v8 (levels 81-90, idea: heart baskets that give an egg back and gold baskets
+worth bonus points) and v9 (levels 91-100, a grand finale mixing every trick).
+
 ## Shipping a version
 
 Bump `versionCode` / `versionName` in `android/app/build.gradle` (and `version` in `package.json` and the
