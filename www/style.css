@@ -156,6 +156,7 @@ h2 { font-size: 32px; }
 .mark.pulse { background: #ff8c42; }
 .mark.grow { background: #b06cff; }
 .mark.nap { background: #5b8def; }
+.mark.wind { background: #8ecae6; }
 
 /* "Start at" level picker (shown once a level after 1 has been reached). */
 .start-from {

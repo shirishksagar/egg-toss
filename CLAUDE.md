@@ -68,6 +68,13 @@ Never print, commit or overwrite them; without them no update to the same app ca
   `awake` = 1.2-2.2 s, then stops for a `sleep` = 0.7-1.1 s nap, then goes on (it keeps its speed and
   direction). Blue band with a face: shut eyes and floating z's while napping, blinking for 0.3 s
   (`NAP_WARN`) before it wakes.
+- **Wind (levels 61-70, v6):** band mix wind 3 : nap 1 : grow 1 : pulse 1 : turn 1, chance 55% → 75%. A
+  windy basket has `wind` = ±20-50 units/s: an egg thrown from it (`egg.wind`, set by `toss`) drifts
+  sideways at that speed all the way (kept on screen), about ±18-46 units by the time it reaches the next
+  basket. A windy basket moves slower (`WIND_SLOW`: × 0.5 if its number is even, × 0.75 if odd): easier
+  to aim from, and two baskets moving in step could otherwise keep a drifting egg from ever landing (the
+  bot found that). A flag on the basket blows the wind's way; while the egg is in a windy basket, wind
+  streaks cross the screen and an arrow under the eggs shows the direction and strength.
 
 ## Starting from a level, saves
 
@@ -95,6 +102,7 @@ Branches are not merged into main.
 | `egg-toss-v3-levels-31-40` | 3.0 (30) | 40 | 41 | Pulsing baskets (speed up and slow down), scenes Butterfly Garden … Neon Night |
 | `egg-toss-v4-levels-41-50` | 4.0 (40) | 50 | 51 | Growing baskets (catch width changes), scenes Hot Air Valley … Glacier Glow |
 | `egg-toss-v5-levels-51-60` | 5.0 (50) | 60 | 61 | Sleepy baskets (stop for a nap, then go on), scenes Counting Sheep … Pillow Clouds |
+| `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | 71 | Wind that pushes the flying egg sideways (flag + arrow), scenes Pinwheel Park … Storm Front |
 
 ## Shipping a version
 

@@ -1219,6 +1219,237 @@
     }
   }
 
+  function pinwheels(g, v) {
+    const colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4'];
+    for (const [fx, fy, s] of [[0.15, 0.82, 1], [0.38, 0.88, 0.8], [0.65, 0.84, 1.2], [0.88, 0.9, 0.9]]) {
+      const x = v.W * fx;
+      const y = v.H * fy;
+      g.strokeStyle = '#8d6e63';
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x, v.H);
+      g.stroke();
+      g.save();
+      g.translate(x, y);
+      g.rotate(v.clock * (3 + fx * 2));
+      for (let k = 0; k < 4; k++) {
+        g.fillStyle = colors[k];
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(14 * s, -2 * s);
+        g.lineTo(14 * s, -14 * s);
+        g.closePath();
+        g.fill();
+        g.rotate(Math.PI / 2);
+      }
+      g.restore();
+    }
+  }
+
+  function bunting(g, v) {
+    const colors = ['#ef476f', '#ffd166', '#06d6a0', '#118ab2', '#9b5de5'];
+    for (const [y0, sag] of [[0.12, 30], [0.3, 24]]) {
+      const y = v.H * y0;
+      g.strokeStyle = 'rgba(90,60,40,0.7)';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.quadraticCurveTo(v.W / 2, y + sag * 2, v.W, y);
+      g.stroke();
+      for (let k = 0; k < 12; k++) {
+        const t = (k + 0.5) / 12;
+        const x = t * v.W;
+        const yy = y + sag * 4 * t * (1 - t);
+        const flap = Math.sin(v.clock * 6 + k) * 3;
+        g.fillStyle = colors[k % colors.length];
+        g.beginPath();
+        g.moveTo(x - 9, yy);
+        g.lineTo(x + 9, yy);
+        g.lineTo(x + flap, yy + 16);
+        g.closePath();
+        g.fill();
+      }
+    }
+  }
+
+  function whirlwind(g, v) {
+    const cx = v.W * 0.5 + Math.sin(v.clock * 0.5) * v.W * 0.3;
+    const base = v.H * 0.9;
+    g.strokeStyle = 'rgba(210,190,150,0.55)';
+    g.lineWidth = 3;
+    for (let k = 0; k < 9; k++) {
+      const y = base - k * 18;
+      const r = 8 + k * 6;
+      const sway = Math.sin(v.clock * 2 + k * 0.6) * k * 2;
+      g.beginPath();
+      g.ellipse(cx + sway, y, r, r * 0.25, 0, v.clock * 6 + k, v.clock * 6 + k + Math.PI * 1.4);
+      g.stroke();
+    }
+  }
+
+  function lighthouse(g, v) {
+    const x = v.W * 0.78;
+    const base = v.H * 0.8;
+    const angle = v.clock * 1.2;
+    const beam = g.createRadialGradient(x, base - 118, 0, x, base - 118, 260);
+    beam.addColorStop(0, 'rgba(255,245,180,0.45)');
+    beam.addColorStop(1, 'rgba(255,245,180,0)');
+    g.fillStyle = beam;
+    g.beginPath();
+    g.moveTo(x, base - 118);
+    g.arc(x, base - 118, 260, Math.PI + Math.sin(angle) * 0.6 - 0.12, Math.PI + Math.sin(angle) * 0.6 + 0.12);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#5c4033';
+    g.beginPath();
+    g.moveTo(x - 40, base + 5); g.lineTo(x - 20, base - 12); g.lineTo(x + 30, base - 8); g.lineTo(x + 50, base + 5);
+    g.closePath();
+    g.fill();
+    for (let k = 0; k < 4; k++) {
+      g.fillStyle = k % 2 ? '#ffffff' : '#e63946';
+      const y1 = base - 10 - k * 25;
+      const w1 = 16 - k * 1.5;
+      g.beginPath();
+      g.moveTo(x - w1, y1); g.lineTo(x - w1 + 1.5, y1 - 25); g.lineTo(x + w1 - 1.5, y1 - 25); g.lineTo(x + w1, y1);
+      g.closePath();
+      g.fill();
+    }
+    g.fillStyle = '#ffe066';
+    g.fillRect(x - 8, base - 124, 16, 12);
+    g.fillStyle = '#3d405b';
+    g.beginPath();
+    g.moveTo(x - 12, base - 124); g.lineTo(x, base - 136); g.lineTo(x + 12, base - 124);
+    g.closePath();
+    g.fill();
+  }
+
+  function pirateShip(g, v, { level = 0.8 } = {}) {
+    const x = v.W * 0.35 + Math.sin(v.clock * 0.3) * 20;
+    const y = v.H * level + Math.sin(v.clock * 1.4) * 3;
+    const tilt = Math.sin(v.clock * 1.4) * 0.05;
+    g.save();
+    g.translate(x, y);
+    g.rotate(tilt);
+    g.fillStyle = '#6f4518';
+    g.beginPath();
+    g.moveTo(-50, -14); g.lineTo(50, -14); g.lineTo(38, 6); g.lineTo(-38, 6);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#4a2c10';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(0, -14); g.lineTo(0, -80);
+    g.stroke();
+    const billow = 6 + Math.sin(v.clock * 2) * 2;
+    g.fillStyle = '#fdf0d5';
+    g.beginPath();
+    g.moveTo(-26, -74); g.quadraticCurveTo(-26 + billow, -55, -26, -36); g.lineTo(26, -36);
+    g.quadraticCurveTo(26 + billow, -55, 26, -74);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#222';
+    g.beginPath();
+    g.moveTo(0, -80); g.lineTo(18, -86 + Math.sin(v.clock * 6) * 2); g.lineTo(0, -92);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.arc(0, -55, 6, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  }
+
+  function palmTrees(g, v) {
+    for (const [fx, h, lean] of [[0.12, 120, 0.25], [0.86, 100, -0.3]]) {
+      const x = v.W * fx;
+      const base = v.H * 0.92;
+      const sway = Math.sin(v.clock * 1.6 + fx * 5) * 0.06;
+      const topX = x + Math.sin(lean + sway) * h;
+      const topY = base - Math.cos(lean + sway) * h;
+      g.strokeStyle = '#8d6e46';
+      g.lineWidth = 8;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(x, base);
+      g.quadraticCurveTo(x + (topX - x) * 0.2, base - h * 0.5, topX, topY);
+      g.stroke();
+      g.strokeStyle = '#2d6a4f';
+      g.lineWidth = 5;
+      for (let k = 0; k < 6; k++) {
+        const a = -Math.PI / 2 + (k - 2.5) * 0.55 + Math.sin(v.clock * 3 + k) * 0.08;
+        g.beginPath();
+        g.moveTo(topX, topY);
+        g.quadraticCurveTo(topX + Math.cos(a) * 30, topY + Math.sin(a) * 30 - 6, topX + Math.cos(a) * 46, topY + Math.sin(a) * 46 + 14);
+        g.stroke();
+      }
+      g.lineCap = 'butt';
+    }
+  }
+
+  function cloudStreaks(g, v, { color = 'rgba(255,255,255,0.55)', speed = 120 } = {}) {
+    g.strokeStyle = color;
+    g.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const y = v.H * (0.08 + hash(i + 120) * 0.7);
+      const len = 30 + hash(i + 121) * 60;
+      const x = wrap(hash(i + 122) * v.W + v.clock * speed * (0.7 + hash(i + 123) * 0.6), v.W + len * 2) - len;
+      g.lineWidth = 2 + hash(i + 124) * 4;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + len, y);
+      g.stroke();
+    }
+    g.lineCap = 'butt';
+  }
+
+  function whales(g, v, { level = 0.8 } = {}) {
+    for (const [fx, s, dir] of [[0.3, 1, 1], [0.75, 0.7, -1]]) {
+      const x = v.W * fx + Math.sin(v.clock * 0.2 + fx) * 20;
+      const y = v.H * level + 6;
+      g.fillStyle = '#3d5a80';
+      g.beginPath();
+      g.ellipse(x, y, 38 * s, 14 * s, 0, Math.PI, Math.PI * 2);
+      g.closePath();
+      g.fill();
+      g.beginPath();
+      g.moveTo(x - dir * 34 * s, y);
+      g.lineTo(x - dir * 50 * s, y - 14 * s);
+      g.lineTo(x - dir * 42 * s, y);
+      g.closePath();
+      g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.arc(x + dir * 22 * s, y - 6 * s, 1.8 * s, 0, Math.PI * 2);
+      g.fill();
+      const t = (v.clock * 0.5 + fx) % 1;
+      if (t < 0.5) {
+        const h = Math.sin(t * Math.PI * 2) * 28 * s;
+        g.strokeStyle = 'rgba(220,240,255,0.85)';
+        g.lineWidth = 2;
+        for (const a of [-0.5, 0, 0.5]) {
+          g.beginPath();
+          g.moveTo(x + dir * 10 * s, y - 13 * s);
+          g.quadraticCurveTo(x + dir * 10 * s + a * 10, y - 13 * s - h, x + dir * 10 * s + a * 18, y - 13 * s - h * 0.7);
+          g.stroke();
+        }
+      }
+    }
+  }
+
+  function slantRain(g, v, { count = 80, color = 'rgba(200,215,240,0.55)', slant = 0.5 } = {}) {
+    g.strokeStyle = color;
+    g.lineWidth = 1.3;
+    g.beginPath();
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i) * v.W + v.clock * 260 * slant, v.W + 40) - 20;
+      const y = wrap(hash(i + 50) * v.H + v.clock * 520, v.H + 20) - 10;
+      g.moveTo(x, y);
+      g.lineTo(x + 12 * slant, y + 12);
+    }
+    g.stroke();
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -1346,6 +1577,27 @@
       deco: (g, v) => { stars(g, v, { count: 60 }); crescent(g, v, { x: 0.5, y: 0.3, r: 60 }); clouds(g, v, { color: 'rgba(170,185,220,0.35)', size: 1.2 }); } },
     { name: 'Pillow Clouds', top: '#cdb4db', bottom: '#fff1f8',
       deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.92)', size: 1.7, spacing: 110, parallax: 0.5 }); sparkles(g, v, { count: 20, color: '255,255,255' }); } },
+    // Levels 61-70 (v6): windy baskets.
+    { name: 'Pinwheel Park', top: '#74c0fc', bottom: '#e7f5ff',
+      deco: (g, v) => { clouds(g, v, { size: 0.9 }); cloudStreaks(g, v, { color: 'rgba(255,255,255,0.4)', speed: 80 }); pinwheels(g, v); } },
+    { name: 'Festival Flags', top: '#ffd6a5', bottom: '#fffbe6',
+      deco: (g, v) => { sun(g, v, { x: 0.8, y: 0.2, r: 28 }); bunting(g, v); balloons(g, v); } },
+    { name: 'Whirlwind Plains', top: '#e9c46a', bottom: '#fefae0',
+      deco: (g, v) => { dunes(g, v, { colors: ['#a7c957', '#8ab33e', '#6a994e'] }); whirlwind(g, v); leaves(g, v, { count: 16 }); } },
+    { name: 'Lighthouse Point', top: '#22223b', bottom: '#9a8c98',
+      deco: (g, v) => { stars(g, v, { count: 30, alpha: 0.6 }); sea(g, v, { color: '#33415c', foam: 'rgba(220,230,255,0.45)', level: 0.8 }); lighthouse(g, v); } },
+    { name: 'Pirate Seas', top: '#48cae4', bottom: '#caf0f8',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.8)' }); sea(g, v, { color: '#0077b6', level: 0.8 }); pirateShip(g, v); birds(g, v, { count: 3 }); } },
+    { name: 'Palm Beach Breeze', top: '#00b4d8', bottom: '#ffe8a3',
+      deco: (g, v) => { sun(g, v, { x: 0.5, y: 0.18, r: 34 }); sea(g, v, { color: '#00a6a6', level: 0.86 }); palmTrees(g, v); } },
+    { name: 'Racing Clouds', top: '#4361ee', bottom: '#bde0fe',
+      deco: (g, v) => { cloudStreaks(g, v, { speed: 200 }); clouds(g, v, { color: 'rgba(255,255,255,0.7)', size: 1.1 }); birds(g, v, { count: 6, color: 'rgba(20,30,70,0.5)' }); } },
+    { name: 'Whale Bay', top: '#5fa8d3', bottom: '#e0fbfc',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.75)', size: 0.8 }); sea(g, v, { color: '#1b4965', foam: 'rgba(200,230,255,0.5)', level: 0.8 }); whales(g, v); birds(g, v, { count: 4 }); } },
+    { name: 'Gusty Hilltop', top: '#90be6d', bottom: '#f1faee',
+      deco: (g, v) => { cloudStreaks(g, v, { color: 'rgba(255,255,255,0.6)', speed: 150 }); windmills(g, v); leaves(g, v, { count: 26 }); } },
+    { name: 'Storm Front', top: '#1b263b', bottom: '#5c677d',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(60,70,85,0.9)', size: 1.5, spacing: 130 }); cloudStreaks(g, v, { color: 'rgba(150,160,180,0.4)', speed: 220 }); slantRain(g, v); lightning(g, v); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

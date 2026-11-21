@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 60);
-  assert.equal(core.MASTER_LEVEL, 61);
-  assert.equal(core.MASTER_START, 3050);
+  assert.equal(core.LEVELS, 70);
+  assert.equal(core.MASTER_LEVEL, 71);
+  assert.equal(core.MASTER_START, 3550);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -822,4 +822,54 @@ test('a sleepy basket stops for a short nap, then goes on', () => {
   core.update(s, 0.2);
   assert.equal(b.nap.asleep, false, 'woke up after 0.5 s');
   assert.notEqual(b.x, x, 'and goes on');
+});
+
+test('wind blows an egg thrown from a windy basket sideways, the same way all through its flight', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  let windy = 0;
+  for (const b of all.baskets) {
+    if (!b.wind) continue;
+    windy++;
+    assert.ok(core.levelOf(b.n - 1) >= 61, `basket ${b.n}: wind starts in level 61`);
+    assert.ok(Math.abs(b.wind) >= 20 && Math.abs(b.wind) <= 50, 'gentle to medium wind');
+  }
+  assert.ok(windy > 20);
+
+  // How long the egg takes to come back down to the next basket.
+  const v0 = core.TOSS_SPEED;
+  const flight = (v0 + Math.sqrt(v0 * v0 - 2 * core.GRAVITY * core.BASKET_GAP)) / core.GRAVITY;
+
+  const throwFrom = (wind, offset) => {
+    const s = playing(8);
+    const b = findTrick(s, 'wind', core.levelStart(61));
+    jumpTo(s, b.n);
+    const own = core.basket(s, b.n);
+    own.x = core.WORLD_W / 2;
+    own.vx = 0;
+    own.wind = wind;
+    s.egg.x = own.x;
+    const next = aimNext(s, offset);
+    for (const trick of ['turn', 'pulse', 'grow', 'nap']) delete next[trick]; // a plain basket
+    next.width = core.basketSpec(next.n).width;
+    const x = s.egg.x;
+    core.toss(s);
+    assert.equal(s.egg.wind, wind);
+    core.update(s, 0.15);
+    core.update(s, 0.15);
+    const drift = s.egg.x - x;
+    return { drift, events: settle(s), s };
+  };
+
+  // Aimed straight up, a strong wind blows it past the basket.
+  const missed = throwFrom(40, 0);
+  assert.ok(Math.abs(missed.drift - 12) < 0.5, 'drifts 40 units a second');
+  assert.ok(!missed.events.some((e) => e.type === 'catch'), 'blown past the next basket');
+  // With the basket where the wind takes the egg, it is caught.
+  const caught = throwFrom(-40, -40 * flight);
+  assert.ok(caught.drift < 0, 'negative wind blows to the left');
+  assert.ok(caught.events.some((e) => e.type === 'catch' && e.perfect), 'caught where the wind took it');
+  // No wind: straight up as always.
+  const still = throwFrom(0, 0);
+  assert.equal(still.drift, 0);
 });

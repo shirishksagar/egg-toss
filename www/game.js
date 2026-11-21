@@ -578,6 +578,27 @@
         g.globalAlpha = 1;
       }
     }
+    if (b.wind) {
+      // A little flag on the basket's side, blowing the way the wind goes; longer for stronger wind.
+      const dir = b.wind < 0 ? -1 : 1;
+      const px = x - dir * (b.width / 2 - 4);
+      const top = rimY - 30;
+      g.strokeStyle = '#6b4a2b';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(px, rimY + 4);
+      g.lineTo(px, top);
+      g.stroke();
+      const len = 10 + Math.abs(b.wind) * 0.35;
+      const flap = Math.sin(clock * 14 + b.n) * 2.5;
+      g.fillStyle = '#8ecae6';
+      g.beginPath();
+      g.moveTo(px, top);
+      g.quadraticCurveTo(px + dir * len * 0.5, top + 2 + flap, px + dir * len, top + 5 + flap * 0.5);
+      g.quadraticCurveTo(px + dir * len * 0.5, top + 9 - flap, px, top + 11);
+      g.closePath();
+      g.fill();
+    }
     if (b.pulse) {
       // Orange band with speed stripes: one to three, the faster it goes right now.
       const bandY = rimY + 22;
@@ -806,6 +827,52 @@
     g.globalAlpha = 1;
   }
 
+  /**
+   * While the egg sits in a windy basket (or flies from one): wind streaks across the
+   * screen and a big arrow under the eggs, longer and with more stripes for stronger wind.
+   */
+  function drawWind() {
+    if (state.phase === 'ready') return;
+    const egg = state.egg;
+    const wind = egg.mode === 'flying' ? egg.wind : egg.mode === 'sitting' ? C.basket(state, state.current).wind || 0 : 0;
+    if (!wind) return;
+    const dir = wind < 0 ? -1 : 1;
+    const strength = Math.min(1, Math.abs(wind) / 50);
+    g.strokeStyle = `rgba(255,255,255,${0.25 + strength * 0.25})`;
+    g.lineWidth = 1.5;
+    g.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const y = viewH * (0.15 + ((i * 0.37) % 1) * 0.75);
+      const x = ((((i * 97 + clock * Math.abs(wind) * 4) % (W + 80)) + W + 80) % (W + 80)) - 40;
+      const sx = dir > 0 ? x : W - x;
+      g.beginPath();
+      g.moveTo(sx, y);
+      g.lineTo(sx - dir * (14 + strength * 22), y);
+      g.stroke();
+    }
+    // The arrow: length and stripe count show the strength.
+    const y = 62;
+    const len = 26 + strength * 44;
+    g.save();
+    g.translate(W / 2, y);
+    g.fillStyle = 'rgba(30, 60, 90, 0.45)';
+    g.beginPath();
+    g.roundRect(-58, -15, 116, 30, 12);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(dir * (len / 2 + 8), 0);
+    g.lineTo(dir * (len / 2 - 6), -10);
+    g.lineTo(dir * (len / 2 - 6), -4);
+    g.lineTo(-dir * len / 2, -4);
+    g.lineTo(-dir * len / 2, 4);
+    g.lineTo(dir * (len / 2 - 6), 4);
+    g.lineTo(dir * (len / 2 - 6), 10);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+
   /** Remaining eggs at the top centre: whole for each life left, cracked for each lost. */
   function drawLives() {
     const y = 34;
@@ -847,6 +914,7 @@
     if (crackFx) drawCrack(crackFx);
     drawFloaters();
     if (state.phase !== 'ready') drawLives();
+    drawWind();
     drawBanner();
   }
 

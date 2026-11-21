@@ -54,7 +54,7 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 60;           // normal levels
+  const LEVELS = 70;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
@@ -62,6 +62,7 @@
   const LATE_SPEED_RISE = 65 / 4000;
   const TURN_WARN = 0.35;      // seconds a turning basket wiggles before it turns
   const NAP_WARN = 0.3;        // seconds a napping basket blinks awake before it goes on
+  const WIND_SLOW = [0.5, 0.75]; // a windy basket moves at this share of its speed (even, odd number)
   const GROW_MID = 1.15;       // a growing basket's width swings around this × its normal width
 
   /**
@@ -75,6 +76,7 @@
     { from: 31, to: 40, tricks: [['pulse', 2], ['turn', 1]], chance: [0.45, 0.7] },
     { from: 41, to: 50, tricks: [['grow', 2], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.72] },
     { from: 51, to: 60, tricks: [['nap', 2], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.75] },
+    { from: 61, to: 70, tricks: [['wind', 3], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.75] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
@@ -83,6 +85,7 @@
     pulse: { first: 31, tip: 'Zoomy baskets speed up and slow down!' },
     grow: { first: 41, tip: 'Stretchy baskets grow and shrink!' },
     nap: { first: 51, tip: 'Sleepy baskets stop for a nap!' },
+    wind: { first: 61, tip: 'Wind blows the egg: watch the arrow!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -110,7 +113,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 3050
+  const MASTER_START = levelEnd(LEVELS); // 3550
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -220,6 +223,16 @@
       const awake = 1.2 + nextRandom(state) * 1.0;
       b.nap = { awake, sleep: 0.7 + nextRandom(state) * 0.4, left: awake * (0.3 + 0.7 * nextRandom(state)), asleep: false };
     },
+    // Wind around this basket: an egg thrown from it drifts sideways at `wind` units per
+    // second (negative is to the left) all the way up and down. A windy basket moves slower:
+    // WIND_SLOW[0] of its speed if its number is even, WIND_SLOW[1] if odd. That makes it
+    // easier to aim from, and it can never stay in step with the next basket (two baskets
+    // moving in step could keep the drifting egg from ever landing).
+    wind(state, b) {
+      const strength = 20 + nextRandom(state) * 30;
+      b.wind = nextRandom(state) < 0.5 ? -strength : strength;
+      b.vx *= WIND_SLOW[b.n % 2];
+    },
   };
 
   function growWidth(grow) {
@@ -269,7 +282,7 @@
       highest: floor,          // highest basket reached; only higher ones score
       levelPoints: {},         // points scored in each level this game: { [level]: points }
       baskets: [],
-      egg: { mode: 'sitting', x: WORLD_W / 2, y: floor * BASKET_GAP, vy: 0 }, // sitting | flying | cracked
+      egg: { mode: 'sitting', x: WORLD_W / 2, y: floor * BASKET_GAP, vy: 0, wind: 0 }, // sitting | flying | cracked; wind of the last toss
       crack: null,             // { x, y, timer } while the cracked egg is shown
       cameraY: floor * BASKET_GAP + CAMERA_LOWEST,
       time: 0,
@@ -293,11 +306,12 @@
     return state;
   }
 
-  /** Throw the egg straight up. Only works while it is sitting in a basket. */
+  /** Throw the egg straight up (the wind of its basket may push it sideways). Only works while it is sitting in a basket. */
   function toss(state) {
     if (state.phase !== 'playing' || state.egg.mode !== 'sitting') return [];
     state.egg.mode = 'flying';
     state.egg.vy = TOSS_SPEED;
+    state.egg.wind = basket(state, state.current).wind || 0;
     return [{ type: 'toss' }];
   }
 
@@ -385,10 +399,11 @@
       return;
     }
 
-    // Flying: straight up and down, no sideways motion.
+    // Flying: straight up and down; sideways only if the basket it was thrown from is windy.
     const prevY = egg.y;
     egg.vy -= GRAVITY * dt;
     egg.y += egg.vy * dt;
+    if (egg.wind) egg.x = Math.min(WORLD_W - EGG_RADIUS, Math.max(EGG_RADIUS, egg.x + egg.wind * dt));
     if (egg.vy >= 0) return;
 
     const next = basket(state, state.current + 1);
@@ -508,7 +523,7 @@
 
   return {
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
-    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN,
+    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
     cameraTarget, groundY, trickChance, trickTip, migrateSave,
   };
