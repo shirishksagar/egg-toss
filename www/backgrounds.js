@@ -1,7 +1,7 @@
 /*
- * Egg Toss — the level backgrounds: 20 scenes plus the Master level. Each has a sky
- * gradient and a few decorations (clouds, sun, rain, aurora, planets...) that scroll
- * gently with the camera.
+ * Egg Toss — the level backgrounds: one scene per level plus the Master level (always the
+ * last entry of THEMES). Each has a sky gradient and a few decorations (clouds, sun, rain,
+ * aurora, planets, kites, lanterns...) that scroll gently with the camera.
  *
  * draw(g, level, view) paints the background for a level into a 2D context whose
  * transform is already set to world units: view = { W, H, cameraY, clock }.
@@ -338,7 +338,222 @@
     }
   }
 
-  // ---- The 20 levels -----------------------------------------------------------
+  /** Things that scroll past with the camera, one every `spacing` world units. */
+  function scrolling(v, spacing, parallax, drawOne) {
+    const camera = v.cameraY * parallax;
+    const first = Math.floor(camera / spacing) - 1;
+    const last = Math.ceil((camera + v.H) / spacing) + 1;
+    for (let i = first; i <= last; i++) drawOne(i, v.H - (i * spacing - camera));
+  }
+
+  function kites(g, v) {
+    const colors = [['#ff595e', '#ffca3a'], ['#1982c4', '#8ac926'], ['#6a4c93', '#ff924c'], ['#ff7eb6', '#4ecdc4']];
+    scrolling(v, 210, 0.35, (i, y0) => {
+      const x = 40 + hash(i + 21) * (v.W - 80) + Math.sin(v.clock * 0.9 + i) * 14;
+      const y = y0 + Math.sin(v.clock * 1.3 + i * 2) * 6;
+      const s = 14 + hash(i + 8) * 8;
+      const tilt = Math.sin(v.clock * 1.1 + i) * 0.25;
+      const [c1, c2] = colors[wrap(i, colors.length)];
+      g.save();
+      g.translate(x, y);
+      g.rotate(tilt);
+      g.fillStyle = c1;
+      g.beginPath();
+      g.moveTo(0, -s * 1.2); g.lineTo(s * 0.8, 0); g.lineTo(0, s * 1.4); g.lineTo(-s * 0.8, 0);
+      g.closePath();
+      g.fill();
+      g.fillStyle = c2;
+      g.beginPath();
+      g.moveTo(0, -s * 1.2); g.lineTo(s * 0.8, 0); g.lineTo(0, 0);
+      g.moveTo(0, s * 1.4); g.lineTo(-s * 0.8, 0); g.lineTo(0, 0);
+      g.fill();
+      // Wavy tail with bows.
+      g.strokeStyle = 'rgba(70,50,40,0.6)';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(0, s * 1.4);
+      for (let k = 1; k <= 6; k++) g.lineTo(Math.sin(v.clock * 4 + k + i) * 5, s * 1.4 + k * 7);
+      g.stroke();
+      g.fillStyle = c2;
+      for (let k = 2; k <= 6; k += 2) {
+        const bx = Math.sin(v.clock * 4 + k + i) * 5;
+        const by = s * 1.4 + k * 7;
+        g.beginPath();
+        g.moveTo(bx, by); g.lineTo(bx - 4, by - 3); g.lineTo(bx - 4, by + 3);
+        g.moveTo(bx, by); g.lineTo(bx + 4, by - 3); g.lineTo(bx + 4, by + 3);
+        g.fill();
+      }
+      g.restore();
+    });
+  }
+
+  function bubbles(g, v, { count = 26, tint = '255,255,255' } = {}) {
+    g.lineWidth = 1.3;
+    for (let i = 0; i < count; i++) {
+      const r = 4 + hash(i + 12) * 12;
+      const x = wrap(hash(i) * v.W + Math.sin(v.clock * 1.5 + i) * 10, v.W);
+      const y = wrap(hash(i + 30) * (v.H + 40) - v.clock * (18 + hash(i + 5) * 26), v.H + 40) - 20;
+      g.fillStyle = `rgba(${tint},0.12)`;
+      g.strokeStyle = `rgba(${tint},0.6)`;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.fillStyle = `rgba(${tint},0.7)`;
+      g.beginPath();
+      g.arc(x - r * 0.35, y - r * 0.35, r * 0.22, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function lanterns(g, v, { color = '#ff8c42' } = {}) {
+    scrolling(v, 120, 0.25, (i, y0) => {
+      const x = 20 + hash(i + 40) * (v.W - 40) + Math.sin(v.clock * 0.5 + i) * 6;
+      const y = y0 - ((v.clock * (8 + hash(i) * 6)) % 120);
+      const s = 8 + hash(i + 2) * 6;
+      const flicker = 0.75 + 0.25 * Math.sin(v.clock * 7 + i * 3);
+      const glow = g.createRadialGradient(x, y, 1, x, y, s * 3.2);
+      glow.addColorStop(0, `rgba(255,190,90,${0.45 * flicker})`);
+      glow.addColorStop(1, 'rgba(255,190,90,0)');
+      g.fillStyle = glow;
+      g.fillRect(x - s * 3.2, y - s * 3.2, s * 6.4, s * 6.4);
+      g.fillStyle = color;
+      g.beginPath();
+      g.moveTo(x - s * 0.7, y - s);
+      g.lineTo(x + s * 0.7, y - s);
+      g.quadraticCurveTo(x + s * 1.1, y, x + s * 0.55, y + s);
+      g.lineTo(x - s * 0.55, y + s);
+      g.quadraticCurveTo(x - s * 1.1, y, x - s * 0.7, y - s);
+      g.fill();
+      g.fillStyle = `rgba(255,240,180,${0.8 * flicker})`;
+      g.beginPath();
+      g.ellipse(x, y + s * 0.6, s * 0.3, s * 0.2, 0, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  function meteors(g, v, { count = 4, color = '255,255,255' } = {}) {
+    g.lineCap = 'round';
+    for (let i = 0; i < count; i++) {
+      const period = 2.2 + hash(i + 3) * 2;
+      const t = (v.clock + hash(i) * period) % period;
+      if (t > 0.9) continue;
+      const round = Math.floor((v.clock + hash(i) * period) / period);
+      const sx = v.W * (0.2 + hash(i * 7 + round) * 0.9);
+      const sy = v.H * (0.05 + hash(i * 5 + round + 1) * 0.4);
+      const x = sx - t * 260;
+      const y = sy + t * 150;
+      const fade = 1 - t / 0.9;
+      const grad = g.createLinearGradient(x, y, x + 60, y - 35);
+      grad.addColorStop(0, `rgba(${color},${fade})`);
+      grad.addColorStop(1, `rgba(${color},0)`);
+      g.strokeStyle = grad;
+      g.lineWidth = 2.4;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + 60, y - 35);
+      g.stroke();
+    }
+  }
+
+  function fireflies(g, v, { count = 28, color = '220,255,120' } = {}) {
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i) * v.W + Math.sin(v.clock * (0.5 + hash(i + 1)) + i) * 26, v.W);
+      const y = v.H * (0.2 + hash(i + 9) * 0.75) + Math.cos(v.clock * (0.4 + hash(i + 2)) + i * 2) * 18;
+      const a = Math.max(0, Math.sin(v.clock * (1.5 + hash(i + 4) * 2) + i * 5));
+      const glow = g.createRadialGradient(x, y, 0, x, y, 9);
+      glow.addColorStop(0, `rgba(${color},${0.9 * a})`);
+      glow.addColorStop(1, `rgba(${color},0)`);
+      g.fillStyle = glow;
+      g.fillRect(x - 9, y - 9, 18, 18);
+    }
+  }
+
+  function treeline(g, v, { color = '#0b2420', height = 0.22 } = {}) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(0, v.H);
+    for (let i = 0; i <= 14; i++) {
+      const x = (i / 14) * v.W;
+      const h = v.H * height * (0.6 + hash(i + 70) * 0.5);
+      g.lineTo(x - 13, v.H - h * 0.35);
+      g.lineTo(x, v.H - h);
+      g.lineTo(x + 13, v.H - h * 0.35);
+    }
+    g.lineTo(v.W, v.H);
+    g.closePath();
+    g.fill();
+  }
+
+  function paperPlanes(g, v) {
+    for (let i = 0; i < 5; i++) {
+      const speed = 30 + hash(i + 2) * 25;
+      const x = wrap(hash(i) * v.W + v.clock * speed, v.W + 60) - 30;
+      const y = v.H * (0.12 + hash(i + 6) * 0.6) + Math.sin(v.clock * 1.2 + i) * 12;
+      const tilt = Math.cos(v.clock * 1.2 + i) * 0.15;
+      g.save();
+      g.translate(x, y);
+      g.rotate(tilt);
+      g.fillStyle = 'rgba(255,255,255,0.95)';
+      g.beginPath();
+      g.moveTo(14, 0); g.lineTo(-12, -7); g.lineTo(-6, 0);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(200,210,235,0.95)';
+      g.beginPath();
+      g.moveTo(14, 0); g.lineTo(-6, 0); g.lineTo(-10, 6);
+      g.closePath();
+      g.fill();
+      g.restore();
+    }
+  }
+
+  function jellyfish(g, v) {
+    const colors = ['255,140,200', '170,150,255', '120,220,255'];
+    scrolling(v, 170, 0.3, (i, y0) => {
+      const x = 30 + hash(i + 50) * (v.W - 60) + Math.sin(v.clock * 0.7 + i) * 10;
+      const pulse = Math.sin(v.clock * 2.5 + i);
+      const y = y0 - pulse * 4;
+      const r = 12 + hash(i + 3) * 8;
+      const c = colors[wrap(i, colors.length)];
+      g.fillStyle = `rgba(${c},0.55)`;
+      g.beginPath();
+      g.ellipse(x, y, r * (1 + pulse * 0.08), r * 0.75, 0, Math.PI, Math.PI * 2);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = `rgba(${c},0.6)`;
+      g.lineWidth = 1.4;
+      for (let k = -2; k <= 2; k++) {
+        g.beginPath();
+        g.moveTo(x + k * r * 0.35, y);
+        for (let j = 1; j <= 5; j++) g.lineTo(x + k * r * 0.35 + Math.sin(v.clock * 3 + j + k) * 3, y + j * r * 0.35);
+        g.stroke();
+      }
+    });
+  }
+
+  function comet(g, v) {
+    const cx = v.W * 0.7 + Math.sin(v.clock * 0.1) * 6;
+    const cy = v.H * 0.2;
+    const tail = g.createLinearGradient(cx, cy, cx - 170, cy + 110);
+    tail.addColorStop(0, 'rgba(190,240,255,0.8)');
+    tail.addColorStop(1, 'rgba(190,240,255,0)');
+    g.fillStyle = tail;
+    g.beginPath();
+    g.moveTo(cx + 6, cy - 6);
+    g.lineTo(cx - 180, cy + 100);
+    g.lineTo(cx - 150, cy + 125);
+    g.lineTo(cx - 6, cy + 6);
+    g.closePath();
+    g.fill();
+    const head = g.createRadialGradient(cx, cy, 0, cx, cy, 16);
+    head.addColorStop(0, 'rgba(255,255,255,1)');
+    head.addColorStop(1, 'rgba(190,240,255,0)');
+    g.fillStyle = head;
+    g.fillRect(cx - 16, cy - 16, 32, 32);
+  }
+
+  // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
     { name: 'Sunny Meadow', top: '#5fb4ec', bottom: '#cdeeff', text: '#fff',
@@ -381,7 +596,28 @@
       deco: (g, v) => { stars(g, v, { count: 70 }); galaxy(g, v); } },
     { name: 'Egg Heaven', top: '#ffd76a', bottom: '#fff8e7',
       deco: (g, v) => { sun(g, v, { x: 0.5, y: 0.2, r: 40, color: '#fffbe6', glow: 'rgba(255,230,140,0.6)' }); clouds(g, v, { color: 'rgba(255,255,255,0.9)', size: 1.3 }); sparkles(g, v); } },
-    // Level 21: the endless Master level.
+    // Levels 21-30 (v2): turning baskets.
+    { name: 'Kite Day', top: '#4fb0e8', bottom: '#d8f3ff',
+      deco: (g, v) => { sun(g, v, { x: 0.2, y: 0.14 }); clouds(g, v, { size: 0.8 }); kites(g, v); } },
+    { name: 'Bubble Bay', top: '#2fb5c4', bottom: '#dcfbfd',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.5)', size: 0.7 }); bubbles(g, v); } },
+    { name: 'Lantern Night', top: '#1b1440', bottom: '#5a2a5e',
+      deco: (g, v) => { stars(g, v, { count: 35, alpha: 0.7 }); lanterns(g, v); } },
+    { name: 'Meteor Shower', top: '#070b24', bottom: '#1d2a5c',
+      deco: (g, v) => { stars(g, v, { count: 70 }); meteors(g, v); } },
+    { name: 'Firefly Forest', top: '#0e2a2a', bottom: '#2f5d50',
+      deco: (g, v) => { stars(g, v, { count: 20, alpha: 0.5 }); moon(g, v, { x: 0.8, y: 0.12, r: 18 }); treeline(g, v); fireflies(g, v); } },
+    { name: 'Paper Planes', top: '#8ec5fc', bottom: '#e0c3fc',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.65)' }); paperPlanes(g, v); } },
+    { name: 'Misty Sunrise', top: '#ff9a8b', bottom: '#ffe3b3',
+      deco: (g, v) => { sun(g, v, { x: 0.35, y: 0.6, r: 46, color: '#fff0c2', glow: 'rgba(255,200,150,0.5)' }); mountains(g, v, { color: 'rgba(190,120,140,0.45)' }); clouds(g, v, { color: 'rgba(255,240,235,0.55)', size: 1.4, spacing: 150 }); birds(g, v, { color: 'rgba(110,50,60,0.55)' }); } },
+    { name: 'Jellyfish Sky', top: '#2b1055', bottom: '#7597de',
+      deco: (g, v) => { bubbles(g, v, { count: 14, tint: '200,220,255' }); jellyfish(g, v); } },
+    { name: 'Popcorn Clouds', top: '#ffb347', bottom: '#fff5d1',
+      deco: (g, v) => { sun(g, v, { r: 30, color: '#fff7c7' }); clouds(g, v, { color: 'rgba(255,253,240,0.95)', size: 1.6, spacing: 120, parallax: 0.5 }); } },
+    { name: 'Comet Night', top: '#0f2027', bottom: '#2c5364',
+      deco: (g, v) => { stars(g, v, { count: 60 }); comet(g, v); meteors(g, v, { count: 2, color: '190,240,255' }); } },
+    // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },
   ];
@@ -398,7 +634,7 @@
     }
   }
 
-  /** Levels 1-20 have their own scene; 21 (and anything above) is the Master scene. */
+  /** Every normal level has its own scene; the Master level (and anything above) has the last one. */
   function theme(level) {
     return THEMES[Math.min(level, THEMES.length) - 1];
   }

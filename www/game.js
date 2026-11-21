@@ -28,15 +28,33 @@
     try { localStorage.setItem(KEY_BEST, String(value)); } catch (e) { /* storage unavailable */ }
   }
 
-  // Best points scored within each level: { [level]: points }.
+  function load(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  function store(key, value) {
+    try { localStorage.setItem(key, String(value)); } catch (e) { /* storage unavailable */ }
+  }
+
+  // Saved progress: best points scored within each level ({ [level]: points }), the level
+  // the Master best is saved under (it moves up when levels are added), the highest level
+  // reached, and the level the player last chose to start from. migrateSave brings saves
+  // from older versions up to date.
   const KEY_LEVEL_BESTS = 'eggtoss.levelBests';
-  function loadLevelBests() {
-    try { return JSON.parse(localStorage.getItem(KEY_LEVEL_BESTS)) || {}; } catch (e) { return {}; }
-  }
+  const KEY_MASTER = 'eggtoss.masterKey';
+  const KEY_REACHED = 'eggtoss.reached';
+  const KEY_START = 'eggtoss.startLevel';
   function saveLevelBests() {
-    try { localStorage.setItem(KEY_LEVEL_BESTS, JSON.stringify(levelBests)); } catch (e) { /* storage unavailable */ }
+    store(KEY_LEVEL_BESTS, JSON.stringify(levelBests));
   }
-  const levelBests = loadLevelBests();
+  let savedBests = {};
+  try { savedBests = JSON.parse(load(KEY_LEVEL_BESTS)) || {}; } catch (e) { /* unreadable: start afresh */ }
+  const saved = C.migrateSave({ levelBests: savedBests, masterKey: load(KEY_MASTER), reached: load(KEY_REACHED) });
+  const levelBests = saved.levelBests;
+  let reached = saved.reached;
+  saveLevelBests();
+  store(KEY_MASTER, C.MASTER_LEVEL);
+  store(KEY_REACHED, reached);
+  let startLevel = Math.min(reached, parseInt(load(KEY_START), 10) || 1);
   let newLevelBests = new Set(); // levels whose best was beaten this game
 
   let best = loadBest();
@@ -105,9 +123,40 @@
     bestEl.textContent = best;
     for (const el of document.querySelectorAll('.best-value')) el.textContent = best;
     renderLevelBests();
+    renderStartPickers();
   }
 
-  /** Fills every level-bests grid: 20 cells, highlighted where this game set a new best. */
+  function levelName(level) {
+    return level >= C.MASTER_LEVEL ? '★ Master level' : `Level ${level} · ${B.theme(level).name}`;
+  }
+
+  /**
+   * "Start at" pickers: every level reached so far, highest first, level 1 always there.
+   * Hidden until there is more than level 1 to pick.
+   */
+  function renderStartPickers() {
+    startLevel = Math.max(1, Math.min(startLevel, reached));
+    for (const select of document.querySelectorAll('.start-level')) {
+      select.textContent = '';
+      for (let level = reached; level >= 1; level--) {
+        const option = document.createElement('option');
+        option.value = String(level);
+        option.textContent = levelName(level);
+        select.append(option);
+      }
+      select.value = String(startLevel);
+    }
+    for (const row of document.querySelectorAll('.start-from')) row.hidden = reached <= 1;
+  }
+  for (const select of document.querySelectorAll('.start-level')) {
+    select.addEventListener('change', () => {
+      startLevel = parseInt(select.value, 10) || 1;
+      store(KEY_START, startLevel);
+      renderStartPickers();
+    });
+  }
+
+  /** Fills every level-bests grid (all levels and Master), highlighted where this game set a new best. */
   function renderLevelBests() {
     for (const grid of document.querySelectorAll('.level-bests')) {
       grid.textContent = '';
@@ -146,16 +195,17 @@
     clearTimeout(overTimeout);
     A.unlock();
     bestAtStart = best;
-    state = C.newGame(best);
+    const level = Math.max(1, Math.min(startLevel, reached));
+    state = C.newGame(best, Date.now(), C.levelStart(level));
     C.start(state);
     floaters = [];
     crackFx = null;
     scoreEl.textContent = '0';
-    shownLevel = 1;
+    shownLevel = level;
     fadingFrom = null;
     newLevelBests = new Set();
     renderLevelBests();
-    showBanner(1);
+    showBanner(level);
     A.startMusic();
     showPanel(null);
   }
@@ -199,6 +249,7 @@
 
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
+    if (e.target && e.target.tagName === 'SELECT') return; // arrow keys pick a start level there
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') {
       e.preventDefault();
       if (state.phase === 'playing') tossEgg();
@@ -252,6 +303,10 @@
           A.perfectChime();
           buzz([20, 60, 20, 60, 40]);
           showBanner(e.level);
+          if (e.level > reached) {
+            reached = e.level;
+            store(KEY_REACHED, reached);
+          }
           break;
         case 'landBack':
           A.catchPop();
@@ -314,18 +369,24 @@
     }
   }
 
-  /** "Level 2 · Breezy Hills" across the middle of the screen, fading out. */
-  let banner = null;       // { level, age }
+  /**
+   * "Level 2 · Breezy Hills" across the middle of the screen, fading out. On the first
+   * level with a new basket trick it also shows a tip and stays a little longer.
+   */
+  let banner = null;       // { level, age, tip, time }
   const BANNER_TIME = 2.4;
+  const TIP_BANNER_TIME = 3.8;
 
   function showBanner(level) {
-    banner = { level, age: 0 };
+    const tip = C.trickTip(level);
+    banner = { level, age: 0, tip, time: tip ? TIP_BANNER_TIME : BANNER_TIME };
   }
 
   function drawBanner() {
-    if (!banner || banner.age > BANNER_TIME) return;
+    if (!banner || banner.age > banner.time) return;
     const t = banner.age;
-    const alpha = t < 0.3 ? t / 0.3 : t > BANNER_TIME - 0.6 ? (BANNER_TIME - t) / 0.6 : 1;
+    const end = banner.time;
+    const alpha = t < 0.3 ? t / 0.3 : t > end - 0.6 ? (end - t) / 0.6 : 1;
     const pop = t < 0.3 ? 0.7 + 0.3 * Math.sin((t / 0.3) * Math.PI / 2) : 1;
     const y = viewH * 0.36;
     g.save();
@@ -334,7 +395,7 @@
     g.scale(pop, pop);
     g.fillStyle = 'rgba(40, 25, 10, 0.45)';
     g.beginPath();
-    g.roundRect(-150, -42, 300, 84, 22);
+    g.roundRect(-160, -42, 320, banner.tip ? 112 : 84, 22);
     g.fill();
     g.textAlign = 'center';
     g.textBaseline = 'middle';
@@ -352,11 +413,16 @@
     g.font = '800 16px "Trebuchet MS", system-ui, sans-serif';
     g.fillStyle = '#fff';
     g.fillText(subtitle, 0, 22);
+    if (banner.tip) {
+      g.font = '800 15px "Trebuchet MS", system-ui, sans-serif';
+      g.fillStyle = '#bff5ff';
+      g.fillText(banner.tip, 0, 50, 300);
+    }
     g.restore();
   }
 
   function drawGround() {
-    const top = sy(-34);
+    const top = sy(C.groundY(state) - 4);
     if (top > viewH) return;
     g.fillStyle = '#7ccf5a';
     g.beginPath();
@@ -386,44 +452,44 @@
     g.closePath();
   }
 
-  function drawBasketBack(b) {
+  function drawBasketBack(b, x) {
     const rimY = sy(b.y);
     g.fillStyle = '#5c3a1c';
     g.beginPath();
-    g.ellipse(b.x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI * 2);
+    g.ellipse(x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI * 2);
     g.fill();
     g.strokeStyle = '#a86d38';
     g.lineWidth = 3;
     g.beginPath();
-    g.ellipse(b.x, rimY, b.width / 2, RIM_RY, 0, Math.PI, Math.PI * 2);
+    g.ellipse(x, rimY, b.width / 2, RIM_RY, 0, Math.PI, Math.PI * 2);
     g.stroke();
   }
 
-  function drawBasketFront(b) {
+  function drawBasketFront(b, x) {
     const rimY = sy(b.y);
     const grad = g.createLinearGradient(0, rimY, 0, rimY + BASKET_DEPTH);
     grad.addColorStop(0, '#d4954f');
     grad.addColorStop(1, '#94592a');
     g.fillStyle = grad;
-    basketBodyPath(b.x, rimY, b.width);
+    basketBodyPath(x, rimY, b.width);
     g.fill();
 
     // Woven texture.
     g.save();
-    basketBodyPath(b.x, rimY, b.width);
+    basketBodyPath(x, rimY, b.width);
     g.clip();
     g.strokeStyle = 'rgba(90, 52, 20, 0.45)';
     g.lineWidth = 1.5;
     for (let yy = rimY + 9; yy < rimY + BASKET_DEPTH; yy += 7) {
       g.beginPath();
-      g.moveTo(b.x - b.width, yy);
-      g.lineTo(b.x + b.width, yy);
+      g.moveTo(x - b.width, yy);
+      g.lineTo(x + b.width, yy);
       g.stroke();
     }
     for (let xx = -b.width / 2; xx < b.width / 2; xx += 10) {
       g.beginPath();
-      g.moveTo(b.x + xx, rimY);
-      g.lineTo(b.x + xx * 0.72, rimY + BASKET_DEPTH);
+      g.moveTo(x + xx, rimY);
+      g.lineTo(x + xx * 0.72, rimY + BASKET_DEPTH);
       g.stroke();
     }
     g.restore();
@@ -433,8 +499,43 @@
     g.lineWidth = 5;
     g.lineCap = 'round';
     g.beginPath();
-    g.ellipse(b.x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI, false);
+    g.ellipse(x, rimY, b.width / 2, RIM_RY, 0, 0, Math.PI, false);
     g.stroke();
+
+    drawTrickMarks(b, x, rimY);
+  }
+
+  // ---- Basket tricks (levels after 20) ----------------------------------------
+
+  /** Where to draw a basket: a turning basket wiggles just before it turns. */
+  function basketDrawX(b) {
+    if (b.turn && b.vx !== 0 && b.turn.left < C.TURN_WARN) return b.x + Math.sin(clock * 70) * 2.5;
+    return b.x;
+  }
+
+  /** A small arrow pointing left or right. */
+  function arrow(x, y, dir, size, color) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(x + dir * size, y);
+    g.lineTo(x - dir * size * 0.6, y - size * 0.75);
+    g.lineTo(x - dir * size * 0.6, y + size * 0.75);
+    g.closePath();
+    g.fill();
+  }
+
+  /** Marks that tell which trick a basket has. */
+  function drawTrickMarks(b, x, rimY) {
+    if (b.turn) {
+      // Teal band with arrows pointing the way it goes; they flash just before it turns.
+      const bandY = rimY + 13;
+      g.fillStyle = '#3fc1b0';
+      g.fillRect(x - b.width * 0.42, bandY - 4, b.width * 0.84, 8);
+      const warn = b.turn.left < C.TURN_WARN && Math.sin(clock * 30) > 0;
+      const dir = b.vx < 0 ? -1 : 1;
+      arrow(x - 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
+      arrow(x + 9, bandY, dir, 5, warn ? '#ff4d4d' : '#ffffff');
+    }
   }
 
   const EGG_RX = 13;
@@ -673,13 +774,14 @@
     drawGround();
 
     const egg = state.egg;
-    const first = Math.max(0, Math.floor((state.cameraY - 60) / GAP));
+    const first = Math.max(state.floor, Math.floor((state.cameraY - 60) / GAP));
     const last = Math.ceil((state.cameraY + viewH + 60) / GAP);
     for (let n = first; n <= last; n++) {
       const b = C.basket(state, n);
-      drawBasketBack(b);
-      if (egg.mode === 'sitting' && n === state.current) drawEgg(egg.x, sy(egg.y) - 6, false);
-      drawBasketFront(b);
+      const x = basketDrawX(b);
+      drawBasketBack(b, x);
+      if (egg.mode === 'sitting' && n === state.current) drawEgg(egg.x + x - b.x, sy(egg.y) - 6, false);
+      drawBasketFront(b, x);
     }
     if (egg.mode === 'flying') drawEgg(egg.x, sy(egg.y) - 6, egg.vy > 0);
     if (crackFx) drawCrack(crackFx);

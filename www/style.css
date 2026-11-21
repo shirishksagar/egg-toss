@@ -95,14 +95,20 @@ canvas {
   text-align: center;
 }
 .panel[hidden] { display: none; }
-.panel { max-height: calc(100% - 24px); overflow-y: auto; }
+.panel { max-height: calc(100% - 24px); overflow-y: auto; touch-action: pan-y; }
 
-/* Best score per level: 21 cells (20 levels + Master) in a 7 × 3 grid. */
+/* Best score per level: one cell per level plus Master, 7 to a row. More than four rows
+   scroll inside the box, so the Play button stays close. */
 .level-bests {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
   margin: 0 0 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-right: 2px;
 }
 .level-bests .cell {
   padding: 3px 0 2px;
@@ -135,6 +141,43 @@ h2 { font-size: 32px; }
   font-size: 14px;
   line-height: 1.5;
 }
+.tricks-title { margin: 0 0 2px; font-size: 13px; font-weight: 800; color: #8a6d4a; }
+.rules.tricks { font-size: 13px; line-height: 1.45; }
+/* Little colour chips matching the bands drawn on trick baskets. */
+.mark {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 3px;
+  vertical-align: middle;
+  background: #d4954f;
+}
+.mark.turn { background: #3fc1b0; }
+
+/* "Start at" level picker (shown once a level after 1 has been reached). */
+.start-from {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.start-from[hidden] { display: none; }
+.start-from select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 6px;
+  border: 2px solid #e3c9a1;
+  border-radius: 12px;
+  background: #fff8ec;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .best-line { margin: 4px 0 14px; font-size: 16px; font-weight: 700; }
 .final { margin: 6px 0 2px; font-size: 26px; font-weight: 800; }
 .new-best { margin: 0; font-size: 18px; font-weight: 900; color: #d9442b; }

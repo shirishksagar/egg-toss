@@ -244,31 +244,41 @@ test('the camera follows a falling egg down and returns to its basket', () => {
   assert.ok(Math.abs(s.cameraY - high) < 10, 'camera back up at the egg\'s basket');
 });
 
-test('level L has 5 × L baskets, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 20);
-  assert.equal(core.MASTER_LEVEL, 21);
+test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
+  assert.equal(core.LEVELS, 30);
+  assert.equal(core.MASTER_LEVEL, 31);
+  assert.equal(core.MASTER_START, 1550);
+  assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
   assert.equal(core.levelSize(20), 100);
-  assert.equal(core.levelSize(21), Infinity);
+  for (let level = 21; level <= core.LEVELS; level++) assert.equal(core.levelSize(level), 50, `level ${level}`);
+  assert.equal(core.levelSize(core.MASTER_LEVEL), Infinity);
   // Catching basket 5 completes level 1, basket 15 completes level 2, and so on.
   assert.equal(core.levelOf(0), 1);
   assert.equal(core.levelOf(4), 1);
   assert.equal(core.levelOf(5), 2);
   assert.equal(core.levelOf(14), 2);
   assert.equal(core.levelOf(15), 3);
-  assert.equal(core.MASTER_START, 1050);
+  assert.equal(core.levelEnd(20), 1050, 'levels 1-20 are unchanged');
   assert.equal(core.levelOf(1049), 20);
   assert.equal(core.levelOf(1050), 21);
-  assert.equal(core.levelOf(100000), 21, 'Master never ends');
+  assert.equal(core.levelEnd(21), 1100);
+  assert.equal(core.levelOf(core.MASTER_START - 1), core.LEVELS);
+  assert.equal(core.levelOf(core.MASTER_START), core.MASTER_LEVEL);
+  assert.equal(core.levelOf(100000), core.MASTER_LEVEL, 'Master never ends');
   // Each level's basket count matches its size.
-  for (let level = 1; level <= 20; level++) {
+  for (let level = 1; level <= core.LEVELS; level++) {
     let count = 0;
-    for (let n = 1; n <= 1050; n++) if (core.levelOf(n - 1) === level) count++;
-    assert.equal(count, 5 * level, `level ${level}`);
+    for (let n = 1; n <= core.MASTER_START; n++) if (core.levelOf(n - 1) === level) count++;
+    assert.equal(count, core.levelSize(level), `level ${level}`);
+    assert.equal(core.levelStart(level + 1), core.levelEnd(level));
   }
+  assert.equal(core.levelStart(1), 0);
+  assert.equal(core.levelStart(core.MASTER_LEVEL), core.MASTER_START);
   assert.deepEqual(core.levelProgress(7), { level: 2, done: 2, size: 10 });
-  assert.deepEqual(core.levelProgress(1060), { level: 21, done: 10, size: Infinity });
+  assert.deepEqual(core.levelProgress(1060), { level: 21, done: 10, size: 50 });
+  assert.deepEqual(core.levelProgress(core.MASTER_START + 10), { level: core.MASTER_LEVEL, done: 10, size: Infinity });
 });
 
 /** Puts the egg in basket n as if the player had already climbed there. */
@@ -301,7 +311,7 @@ test('catching the 5th basket announces level 2, once', () => {
   assert.equal(climb(s).filter((e) => e.type === 'levelUp').length, 0);
 });
 
-test('reaching basket 1050 enters the Master level', () => {
+test('reaching basket 1050 enters level 21', () => {
   const s = playing();
   jumpTo(s, 1049);
   const up = climb(s).filter((e) => e.type === 'levelUp');
@@ -432,16 +442,39 @@ test('the same seed gives the same baskets', () => {
 });
 
 /**
+ * A copy of the game to try a move on. Only the baskets near the egg are copied; the rest
+ * are shared with the original, which is safe because a trial only plays until the egg is
+ * caught by (or falls past) the next basket, and only baskets near the egg move.
+ */
+function trialCopy(state) {
+  const { baskets, ...rest } = state;
+  const copy = structuredClone(rest);
+  copy.baskets = baskets.slice();
+  const to = Math.min(baskets.length, state.current + 7);
+  for (let n = Math.max(0, state.current - 4); n < to; n++) copy.baskets[n] = structuredClone(baskets[n]);
+  return copy;
+}
+
+/** Tosses now and plays on: true once the next basket catches the egg, false once it can't. */
+function tossCatches(trial) {
+  core.toss(trial);
+  const nextY = core.basket(trial, trial.current + 1).y;
+  for (let t = 0; t < 3; t += FRAME) {
+    if (core.update(trial, FRAME).some((e) => e.type === 'catch')) return true;
+    if (trial.egg.mode !== 'flying' || (trial.egg.vy < 0 && trial.egg.y < nextY - 1)) return false;
+  }
+  return false;
+}
+
+/**
  * Look-ahead bot: before each toss it tries waiting 0, 1, 2 ... frames on a copy of the
- * game, and throws at the first moment that copy shows a catch.
+ * game (made with structuredClone), and throws at the first moment that copy shows a catch.
  */
 function botWait(state) {
+  const base = trialCopy(state);
   for (let wait = 0; wait < 400; wait++) {
-    const trial = structuredClone(state);
-    for (let i = 0; i < wait; i++) core.update(trial, FRAME);
-    core.toss(trial);
-    const events = settle(trial);
-    if (events.some((e) => e.type === 'catch')) return wait;
+    if (tossCatches(trialCopy(base))) return wait;
+    core.update(base, FRAME);
   }
   return -1;
 }
@@ -483,7 +516,7 @@ test('the bot climbs through the first levels', () => {
   assert.equal(s.lives, 3);
 });
 
-test('the bot can clear the end of level 20 and climb into the Master level', () => {
+test('the bot can clear the end of level 20 and climb into level 21', () => {
   const s = playing(77);
   jumpTo(s, 1035);
   assert.deepEqual(botClimb(s, 25), [21]);
@@ -491,10 +524,200 @@ test('the bot can clear the end of level 20 and climb into the Master level', ()
   assert.equal(s.lives, 3);
 });
 
+// Every level after 20: from just before it starts, through its level-up and first 15 baskets.
+for (let level = 21; level <= core.LEVELS; level++) {
+  test(`the bot clears the level-up and first 15 baskets of level ${level} without losing an egg`, () => {
+    const s = playing(500 + level);
+    jumpTo(s, core.levelStart(level) - 2);
+    assert.deepEqual(botClimb(s, 17), [level]);
+    assert.equal(s.current, core.levelStart(level) + 15);
+    assert.equal(s.lives, 3);
+  });
+}
+
+test('the bot can clear the end of the last level and climb into the Master level', () => {
+  const s = playing(78);
+  jumpTo(s, core.MASTER_START - 15);
+  assert.deepEqual(botClimb(s, 25), [core.MASTER_LEVEL]);
+  assert.equal(s.current, core.MASTER_START + 10);
+  assert.equal(s.lives, 3);
+});
+
 test('deep in the Master level the baskets are fast but still catchable', () => {
   const s = playing(5);
-  jumpTo(s, 1200);
-  assert.ok(core.basketSpec(1201).speed > 450);
+  jumpTo(s, core.MASTER_START + 150);
+  assert.ok(core.basketSpec(core.MASTER_START + 151).speed > core.basketSpec(core.MASTER_START).speed + 200);
   botClimb(s, 10);
-  assert.equal(s.current, 1210);
+  assert.equal(s.current, core.MASTER_START + 160);
+});
+
+// ---- Levels after 20, starting from a chosen level, saved progress ----------------
+
+test('levels 1-20 keep exactly the same baskets as before (seed 42 fingerprint from v1.1)', () => {
+  const s = core.newGame(0, 42);
+  core.basket(s, core.BASE_END);
+  let h = 0;
+  for (let n = 0; n <= core.BASE_END; n++) {
+    const b = s.baskets[n];
+    h = (h * 31 + Math.round(b.x * 1000) + Math.round(b.vx * 1000) * 7 + Math.round(b.width * 1000) * 13) % 1000000007;
+    assert.deepEqual(Object.keys(b), ['n', 'x', 'y', 'width', 'vx'], `basket ${n} has no tricks`);
+  }
+  assert.equal(h, 462640167);
+  assert.equal(s.rng, -170924061, 'and they use the same random numbers');
+});
+
+test('after level 20 baskets stay 56 wide and speed up only gently', () => {
+  assert.equal(core.basketSpec(core.BASE_END).speed, 265);
+  for (let n = core.BASE_END + 1; n < core.MASTER_START; n++) {
+    const spec = core.basketSpec(n);
+    assert.equal(spec.width, 56);
+    assert.ok(spec.speed >= core.basketSpec(n - 1).speed);
+  }
+  // 265 at the start of level 21, rising towards 330 by the end of level 100.
+  const perLevel = core.basketSpec(core.levelEnd(22)).speed - core.basketSpec(core.levelEnd(21)).speed;
+  assert.ok(Math.abs(perLevel - 65 / 80) < 1e-9, `${perLevel} faster per level`);
+  assert.ok(core.basketSpec(core.MASTER_START - 1).speed < 331);
+  // The Master level carries on from there.
+  assert.ok(Math.abs(core.basketSpec(core.MASTER_START).speed - core.basketSpec(core.MASTER_START - 1).speed) < 1);
+});
+
+test('a game can start at the first basket of a level reached before', () => {
+  const start = core.levelStart(23);
+  const s = core.start(core.newGame(5, 9, start));
+  assert.equal(s.current, start);
+  assert.equal(s.highest, start);
+  assert.equal(s.floor, start);
+  assert.equal(s.score, 0);
+  assert.equal(core.levelOf(s.current), 23);
+  const pad = core.basket(s, start);
+  assert.equal(pad.vx, 0, 'the starting basket stands still');
+  assert.equal(pad.x, core.WORLD_W / 2);
+  assert.equal(pad.width, core.basketSpec(0).width);
+  assert.equal(s.egg.y, pad.y);
+  // The baskets above are the same as in a full climb with the same seed.
+  const full = core.newGame(5, 9);
+  for (let n = start + 1; n < start + 10; n++) assert.deepEqual(core.basket(s, n), core.basket(full, n));
+
+  // Only baskets above the start score, and they count for the level they are in.
+  const caught = climb(s).find((e) => e.type === 'catch');
+  assert.equal(caught.level, 23);
+  assert.equal(caught.points, 2);
+  assert.deepEqual(s.levelPoints, { 23: 2 });
+
+  // The ground is just below the starting basket: lower baskets never catch the egg.
+  const events = throwToGround(s);
+  const crack = events.find((e) => e.type === 'crack');
+  assert.ok(crack, 'the egg cracks');
+  assert.equal(crack.y, start * core.BASKET_GAP + core.GROUND_Y);
+  assert.equal(core.groundY(s), crack.y);
+  assert.ok(!events.some((e) => e.type === 'catchLow'));
+  for (let i = 0; i < 300 && s.egg.mode !== 'sitting'; i++) core.update(s, FRAME);
+  assert.equal(s.current, start + 1, 'back in the basket it was thrown from');
+  assert.ok(s.cameraY >= start * core.BASKET_GAP + core.GROUND_Y - 150, 'the camera stays near the start');
+});
+
+test('starting from level 1 is the normal game, and the Master level can be a start too', () => {
+  assert.deepEqual(core.newGame(0, 3, core.levelStart(1)), core.newGame(0, 3));
+  const s = core.start(core.newGame(0, 3, core.levelStart(core.MASTER_LEVEL)));
+  assert.equal(core.levelOf(s.current), core.MASTER_LEVEL);
+  assert.equal(climb(s).find((e) => e.type === 'catch').level, core.MASTER_LEVEL);
+});
+
+test('saved level bests: the old Master best moves to the new Master level', () => {
+  // v1.1 saved Master under 21 and had no marker.
+  const old = core.migrateSave({ levelBests: { 1: 9, 20: 150, 21: 40 } });
+  assert.deepEqual(old.levelBests, { 1: 9, 20: 150, [core.MASTER_LEVEL]: 40 });
+  assert.equal(old.levelBests[21], undefined, 'it does not become the best of level 21');
+  assert.equal(old.masterKey, core.MASTER_LEVEL);
+  assert.equal(old.reached, 21, 'reaching Master in v1.1 means reaching level 21 now');
+
+  // Already up to date: nothing changes.
+  const same = core.migrateSave({ levelBests: old.levelBests, masterKey: core.MASTER_LEVEL, reached: 21 });
+  assert.deepEqual(same, old);
+
+  // From a version whose Master was level 31 to one whose Master is 41 (and so on).
+  const moved = core.migrateSave({ levelBests: { 3: 8, 25: 70, 31: 12 }, masterKey: '31', reached: '31' }, 41);
+  assert.deepEqual(moved, { levelBests: { 3: 8, 25: 70, 41: 12 }, masterKey: 41, reached: 31 });
+
+  // Nothing saved yet, or rubbish saved.
+  assert.deepEqual(core.migrateSave({}), { levelBests: {}, masterKey: core.MASTER_LEVEL, reached: 1 });
+  assert.equal(core.migrateSave({ levelBests: null, masterKey: 'x', reached: 'y' }).reached, 1);
+  assert.deepEqual(core.migrateSave({ levelBests: { a: 3, 2: 0, 4: 'x', 5: 6 } }).levelBests, { 5: 6 });
+  // Before v2 nothing was saved about the highest level, so the bests tell; after that the saved value counts.
+  assert.equal(core.migrateSave({ levelBests: { 2: 5, 7: 1 } }).reached, 7);
+  assert.equal(core.migrateSave({ levelBests: { 2: 5 }, masterKey: 31, reached: 24 }).reached, 24);
+  assert.equal(core.migrateSave({ levelBests: { 2: 5, 31: 9 }, masterKey: 31, reached: 21 }, 31).reached, 21);
+  assert.equal(core.migrateSave({ reached: 999 }).reached, core.MASTER_LEVEL);
+});
+
+test('tricks appear only after level 20, more often as the levels go on, the same for the same seed', () => {
+  const s = core.newGame(0, 4242);
+  core.basket(s, core.MASTER_START + 200);
+  for (let n = 0; n <= core.BASE_END; n++) assert.equal(Object.keys(s.baskets[n]).length, 5, `basket ${n}`);
+  const share = (level) => {
+    let count = 0;
+    for (let n = core.levelStart(level) + 1; n <= core.levelEnd(level); n++) {
+      if (Object.keys(s.baskets[n]).length > 5) count++;
+    }
+    return count / core.levelSize(level);
+  };
+  assert.ok(share(21) > 0.1 && share(21) < 0.6, `level 21: ${share(21)}`);
+  let early = 0;
+  let late = 0;
+  for (let level = 21; level <= 23; level++) early += share(level);
+  for (let level = core.LEVELS - 2; level <= core.LEVELS; level++) late += share(level);
+  assert.ok(late > early, 'later levels have more tricks');
+  assert.equal(core.trickChance(20), 0);
+  assert.ok(core.trickChance(core.MASTER_LEVEL) >= core.trickChance(core.LEVELS));
+  const again = core.newGame(0, 4242);
+  core.basket(again, core.MASTER_START + 200);
+  assert.deepEqual(again.baskets, s.baskets);
+  assert.deepEqual(structuredClone(s.baskets), s.baskets, 'baskets are plain data');
+});
+
+test('each trick has a tip on the first level that uses it, and only there', () => {
+  assert.equal(core.trickTip(20), null);
+  for (const [name, info] of Object.entries(core.TRICKS)) {
+    assert.equal(typeof core.trickTip(info.first), 'string', name);
+    assert.ok(info.first > 20 && info.first <= core.LEVELS, name);
+  }
+  const firsts = new Set(Object.values(core.TRICKS).map((t) => t.first));
+  for (let level = 1; level <= core.MASTER_LEVEL; level++) {
+    if (!firsts.has(level)) assert.equal(core.trickTip(level), null, `level ${level}`);
+  }
+});
+
+/** The first basket after `from` that has the trick. */
+function findTrick(state, trick, from = core.BASE_END) {
+  for (let n = from + 1; n < core.MASTER_START + 500; n++) if (core.basket(state, n)[trick]) return core.basket(state, n);
+  throw new Error(`no ${trick} basket`);
+}
+
+test('a turning basket goes on, suddenly turns back for a moment, then carries on', () => {
+  const s = playing(8);
+  const b = findTrick(s, 'turn');
+  assert.ok(b.n > core.BASE_END);
+  jumpTo(s, b.n - 1);
+  b.x = core.WORLD_W / 2;
+  b.vx = Math.abs(b.vx);
+  Object.assign(b.turn, { go: 1, back: 0.4, left: 0.1, backing: false });
+  core.update(s, 0.05);
+  assert.ok(b.vx > 0, 'still going right');
+  core.update(s, 0.1);
+  assert.ok(b.vx < 0, 'turned back');
+  assert.equal(b.turn.backing, true);
+  const x = b.x;
+  core.update(s, 0.2);
+  assert.ok(b.x < x, 'moving left');
+  core.update(s, 0.2);
+  assert.ok(b.vx > 0, 'turned again after 0.4 s');
+  assert.equal(b.turn.backing, false);
+  // Every turning basket goes further forward than back, so it still crosses the screen.
+  const t = core.newGame(0, 1);
+  core.basket(t, core.MASTER_START + 300);
+  for (const basket of t.baskets) if (basket.turn) assert.ok(basket.turn.go > basket.turn.back * 1.5);
+  // A frozen basket stays frozen.
+  b.vx = 0;
+  core.update(s, 2);
+  assert.equal(b.vx, 0);
 });
