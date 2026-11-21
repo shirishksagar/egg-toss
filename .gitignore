@@ -21,3 +21,6 @@ android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/capacitor.plugins.json
 
 .DS_Store
+
+# Built APKs stay on this laptop (builds/ and D:\MyProjects\ClaudeApps\MyAppsAPK), never in Git
+*.apk

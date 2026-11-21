@@ -33,7 +33,7 @@ Never print, commit or overwrite them; without them no update to the same app ca
 ## Shipping a version
 
 Bump `versionCode` / `versionName` in `android/app/build.gradle`, run `npm run build:apk`, then commit
-(including the APK in `builds/`) and push to https://github.com/shirishksagar/egg-toss.
+(not the APK: APKs stay in `builds/` and `MyAppsAPK` on this laptop, never in Git) and push to https://github.com/shirishksagar/egg-toss.
 
 ## Working with the owner
 
