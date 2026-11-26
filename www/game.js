@@ -75,6 +75,7 @@
     dpr = Math.min(window.devicePixelRatio || 1, 3);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
+    if (!w || !h) return; // hidden or not laid out yet: keep the last size (a 0 size made the sky gradient NaN)
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     scale = w / W;
