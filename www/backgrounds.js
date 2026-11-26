@@ -1664,6 +1664,229 @@
     }
   }
 
+  function coins(g, v, { count = 18 } = {}) {
+    for (let i = 0; i < count; i++) {
+      const x = wrap(hash(i + 400) * v.W + Math.sin(v.clock + i) * 6, v.W);
+      const y = wrap(hash(i + 401) * v.H + v.clock * (40 + hash(i + 402) * 40), v.H + 20) - 10;
+      const spin = Math.abs(Math.cos(v.clock * 4 + i));
+      g.fillStyle = '#ffc300';
+      g.strokeStyle = '#d68c00';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.ellipse(x, y, 6 * spin + 0.8, 6, 0, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      if (spin > 0.5) {
+        g.fillStyle = 'rgba(255,255,255,0.6)';
+        g.beginPath();
+        g.ellipse(x - 2 * spin, y - 2, 1.5 * spin, 2, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  function gems(g, v, { count = 10 } = {}) {
+    const colors = ['#4cc9f0', '#f72585', '#7209b7', '#06d6a0', '#ffd60a'];
+    for (let i = 0; i < count; i++) {
+      const x = hash(i + 410) * v.W;
+      const y = v.H * (0.1 + hash(i + 411) * 0.7) + Math.sin(v.clock * 1.4 + i) * 8;
+      const s = 6 + hash(i + 412) * 6;
+      g.fillStyle = colors[i % colors.length];
+      g.beginPath();
+      g.moveTo(x - s, y - s * 0.3); g.lineTo(x - s * 0.5, y - s * 0.8); g.lineTo(x + s * 0.5, y - s * 0.8);
+      g.lineTo(x + s, y - s * 0.3); g.lineTo(x, y + s);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.45)';
+      g.beginPath();
+      g.moveTo(x - s * 0.5, y - s * 0.8); g.lineTo(x, y - s * 0.3); g.lineTo(x - s, y - s * 0.3);
+      g.closePath();
+      g.fill();
+      const tw = Math.max(0, Math.sin(v.clock * 3 + i * 2));
+      g.strokeStyle = `rgba(255,255,255,${tw})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x + s * 0.8 - 3, y - s); g.lineTo(x + s * 0.8 + 3, y - s);
+      g.moveTo(x + s * 0.8, y - s - 3); g.lineTo(x + s * 0.8, y - s + 3);
+      g.stroke();
+    }
+  }
+
+  function potOfGold(g, v) {
+    const x = v.W * 0.78;
+    const base = v.H * 0.9;
+    g.fillStyle = '#ffc300';
+    for (let k = 0; k < 9; k++) {
+      g.beginPath();
+      g.ellipse(x - 18 + (k % 5) * 9, base - 30 - Math.floor(k / 5) * 5 - Math.abs(Math.sin(k)) * 3, 5, 3, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#1b1b1b';
+    g.beginPath();
+    g.moveTo(x - 28, base - 28);
+    g.quadraticCurveTo(x - 34, base, x - 16, base);
+    g.lineTo(x + 16, base);
+    g.quadraticCurveTo(x + 34, base, x + 28, base - 28);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#333';
+    g.fillRect(x - 30, base - 31, 60, 5);
+    g.fillStyle = '#7cb518';
+    g.fillRect(0, base, v.W, v.H - base);
+  }
+
+  function lollipops(g, v) {
+    const colors = [['#ff70a6', '#ffffff'], ['#70d6ff', '#ffffff'], ['#ffd670', '#ff9770'], ['#e9ff70', '#ff70a6']];
+    [[0.1, 90, 18], [0.3, 60, 13], [0.55, 110, 22], [0.8, 75, 16], [0.95, 50, 11]].forEach(([fx, h, r], k) => {
+      const x = v.W * fx;
+      const top = v.H - h;
+      g.strokeStyle = '#fff';
+      g.lineWidth = 4;
+      g.beginPath();
+      g.moveTo(x, v.H);
+      g.lineTo(x, top);
+      g.stroke();
+      const [c1, c2] = colors[k % colors.length];
+      g.fillStyle = c1;
+      g.beginPath();
+      g.arc(x, top, r, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = c2;
+      g.lineWidth = 3;
+      g.beginPath();
+      for (let a = 0; a < Math.PI * 6; a += 0.3) {
+        const rr = (a / (Math.PI * 6)) * r * 0.9;
+        const ang = a + v.clock * 0.8;
+        g.lineTo(x + Math.cos(ang) * rr, top + Math.sin(ang) * rr);
+      }
+      g.stroke();
+    });
+  }
+
+  function iceCreams(g, v) {
+    const scoops = ['#ffafcc', '#bde0fe', '#fdffb6', '#caffbf', '#ffc6ff'];
+    scrolling(v, 190, 0.3, (i, y0) => {
+      const x = 30 + hash(i + 420) * (v.W - 60) + Math.sin(v.clock * 0.7 + i) * 8;
+      const y = y0 + Math.sin(v.clock + i) * 5;
+      g.fillStyle = '#e0a458';
+      g.beginPath();
+      g.moveTo(x - 10, y); g.lineTo(x + 10, y); g.lineTo(x, y + 26);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = 'rgba(150,90,30,0.5)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x - 6, y + 4); g.lineTo(x + 3, y + 16);
+      g.moveTo(x + 6, y + 4); g.lineTo(x - 3, y + 16);
+      g.stroke();
+      for (let k = 0; k < 2; k++) {
+        g.fillStyle = scoops[wrap(i + k, scoops.length)];
+        g.beginPath();
+        g.arc(x, y - 6 - k * 13, 11 - k, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = '#e63946';
+      g.beginPath();
+      g.arc(x, y - 30, 3, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  function bees(g, v, { count = 7 } = {}) {
+    for (let i = 0; i < count; i++) {
+      const cx = v.W * (0.15 + hash(i + 430) * 0.7);
+      const cy = v.H * (0.25 + hash(i + 431) * 0.5);
+      const a = v.clock * (1 + hash(i + 432)) + i;
+      const x = cx + Math.cos(a) * 30 + Math.sin(a * 2.3) * 10;
+      const y = cy + Math.sin(a * 1.3) * 18;
+      const flap = Math.abs(Math.sin(v.clock * 30 + i));
+      g.fillStyle = `rgba(255,255,255,${0.5 + flap * 0.4})`;
+      g.beginPath();
+      g.ellipse(x - 2, y - 6, 3.5, 5 * flap + 1, -0.4, 0, Math.PI * 2);
+      g.ellipse(x + 3, y - 6, 3.5, 5 * flap + 1, 0.4, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#ffc300';
+      g.beginPath();
+      g.ellipse(x, y, 7, 5, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#1b1b1b';
+      g.fillRect(x - 2.5, y - 5, 2, 10);
+      g.fillRect(x + 2, y - 5, 2, 10);
+    }
+  }
+
+  function honeycomb(g, v, { color = 'rgba(255,200,60,0.18)' } = {}) {
+    const r = 18;
+    const dx = r * Math.sqrt(3);
+    g.strokeStyle = color;
+    g.lineWidth = 2;
+    const shift = (v.cameraY * 0.1) % (r * 3);
+    for (let row = -1; row * r * 1.5 < v.H + r * 3; row++) {
+      const y = row * r * 1.5 + shift;
+      for (let col = -1; col * dx < v.W + dx; col++) {
+        const x = col * dx + (row % 2 ? dx / 2 : 0);
+        g.beginPath();
+        for (let k = 0; k < 6; k++) {
+          const a = Math.PI / 6 + (k * Math.PI) / 3;
+          g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        }
+        g.closePath();
+        g.stroke();
+      }
+    }
+  }
+
+  function sunflowers(g, v) {
+    [[0.08, 70, 1], [0.27, 95, 1.2], [0.5, 60, 0.9], [0.72, 100, 1.25], [0.92, 75, 1]].forEach(([fx, h, s], k) => {
+      const x = v.W * fx;
+      const sway = Math.sin(v.clock * 1.2 + k) * 3;
+      const top = v.H - h;
+      g.strokeStyle = '#4f772d';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(x, v.H);
+      g.quadraticCurveTo(x, top + h * 0.5, x + sway, top);
+      g.stroke();
+      g.fillStyle = '#ffd60a';
+      for (let p = 0; p < 12; p++) {
+        const a = (p / 12) * Math.PI * 2 + v.clock * 0.2;
+        g.beginPath();
+        g.ellipse(x + sway + Math.cos(a) * 11 * s, top + Math.sin(a) * 11 * s, 6 * s, 2.8 * s, a, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = '#6f4518';
+      g.beginPath();
+      g.arc(x + sway, top, 7 * s, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  function trophy(g, v) {
+    const x = v.W * 0.5;
+    const y = v.H * 0.3 + Math.sin(v.clock * 1.2) * 4;
+    const glow = g.createRadialGradient(x, y, 5, x, y, 90);
+    glow.addColorStop(0, 'rgba(255,215,0,0.35)');
+    glow.addColorStop(1, 'rgba(255,215,0,0)');
+    g.fillStyle = glow;
+    g.fillRect(x - 90, y - 90, 180, 180);
+    g.fillStyle = '#ffc300';
+    g.beginPath();
+    g.moveTo(x - 24, y - 30); g.lineTo(x + 24, y - 30);
+    g.quadraticCurveTo(x + 22, y + 4, x + 5, y + 10);
+    g.lineTo(x + 5, y + 22); g.lineTo(x + 16, y + 30); g.lineTo(x - 16, y + 30); g.lineTo(x - 5, y + 22); g.lineTo(x - 5, y + 10);
+    g.quadraticCurveTo(x - 22, y + 4, x - 24, y - 30);
+    g.fill();
+    g.strokeStyle = '#ffc300';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.arc(x - 24, y - 16, 9, Math.PI * 0.5, Math.PI * 1.5);
+    g.moveTo(x + 24, y - 25);
+    g.arc(x + 24, y - 16, 9, -Math.PI * 0.5, Math.PI * 0.5);
+    g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.5)';
+    g.fillRect(x - 15, y - 26, 4, 22);
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -1833,6 +2056,27 @@
       deco: (g, v) => { stars(g, v, { count: 50 }); moon(g, v, { x: 0.5, y: 0.25, r: 32 }); sea(g, v, { color: '#002855', foam: 'rgba(255,240,200,0.35)', level: 0.82 }); reeds(g, v); fireflies(g, v, { count: 14 }); } },
     { name: 'Wisp Woods', top: '#081c15', bottom: '#2d6a4f',
       deco: (g, v) => { mist(g, v, { color: '200,255,230', alpha: 0.18 }); treeline(g, v, { color: '#04140d', height: 0.32 }); fireflies(g, v, { count: 24, color: '140,220,255' }); friendlyGhosts(g, v, { count: 2 }); } },
+    // Levels 81-90 (v8): heart and gold prize baskets.
+    { name: 'Treasure Trove', top: '#7f5539', bottom: '#ffe6a7',
+      deco: (g, v) => { sparkles(g, v, { count: 25 }); gems(g, v, { count: 6 }); coins(g, v); } },
+    { name: 'Pot of Gold', top: '#74c69d', bottom: '#f1faee',
+      deco: (g, v) => { rainbow(g, v); clouds(g, v, { color: 'rgba(255,255,255,0.85)' }); potOfGold(g, v); } },
+    { name: 'Lollipop Lane', top: '#ff99c8', bottom: '#fcf6bd',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,230,245,0.85)', size: 1.2 }); lollipops(g, v); } },
+    { name: 'Ice Cream Sky', top: '#a0c4ff', bottom: '#fdffb6',
+      deco: (g, v) => { clouds(g, v, { color: 'rgba(255,255,255,0.7)', size: 0.9 }); iceCreams(g, v); } },
+    { name: 'Busy Bees', top: '#ffb703', bottom: '#fff3b0',
+      deco: (g, v) => { honeycomb(g, v); sun(g, v, { x: 0.2, y: 0.14, r: 28, color: '#fff8d6' }); bees(g, v); } },
+    { name: 'Sunflower Hills', top: '#48cae4', bottom: '#fefae0',
+      deco: (g, v) => { mountains(g, v, { color: 'rgba(130,190,90,0.6)' }); clouds(g, v, { size: 0.8 }); sunflowers(g, v); bees(g, v, { count: 3 }); } },
+    { name: 'Gem Mine', top: '#10002b', bottom: '#3c096c',
+      deco: (g, v) => { stars(g, v, { count: 30, alpha: 0.5 }); crystals(g, v); gems(g, v); } },
+    { name: 'Champion Sky', top: '#023e8a', bottom: '#48cae4',
+      deco: (g, v) => { fireworks(g, v); bunting(g, v); trophy(g, v); } },
+    { name: 'Royal Gardens', top: '#c8b6ff', bottom: '#ffd6ff',
+      deco: (g, v) => { castle(g, v, { color: 'rgba(160,110,200,0.5)' }); petals(g, v, { count: 20 }); hearts(g, v, { count: 8 }); } },
+    { name: 'Golden Sunset', top: '#ff8800', bottom: '#ffe8a3',
+      deco: (g, v) => { sun(g, v, { x: 0.5, y: 0.62, r: 56, color: '#fff1b8', glow: 'rgba(255,200,80,0.55)' }); clouds(g, v, { color: 'rgba(255,220,170,0.7)', size: 1.3 }); sparkles(g, v, { count: 20 }); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

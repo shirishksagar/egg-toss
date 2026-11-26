@@ -80,6 +80,12 @@ Never print, commit or overwrite them; without them no update to the same app ca
   `GHOST_MIN` = 0.15 to 1. Only the look changes: it catches exactly like a normal basket, even when
   faintest. game.js draws it at that alpha plus a dashed glowing outline and twinkles that get stronger as
   it fades, so it can always be found.
+- **Heart and gold prizes (levels 81-90, v8):** band mix gold 2 : heart 1 : ghost 1 : wind 1 : nap 1 : grow 1
+  : pulse 1 : turn 1, chance 55% → 80%. They move like plain baskets and pay out only the first time they
+  are reached (a new basket): a heart gives back a lost egg (never more than 3; `lifeUp` event), gold adds
+  `GOLD_BONUS` = 3 points (catch event `bonus`, counted in the level's points). One shared tip on level 81
+  (`trickTip` joins tips of tricks that start on the same level). A heart bobs above an unclaimed heart
+  basket; gold baskets are painted gold and twinkle until claimed.
 
 ## Starting from a level, saves
 
@@ -109,9 +115,9 @@ Branches are not merged into main.
 | `egg-toss-v5-levels-51-60` | 5.0 (50) | 60 | 61 | Sleepy baskets (stop for a nap, then go on), scenes Counting Sheep … Pillow Clouds |
 | `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | 71 | Wind that pushes the flying egg sideways (flag + arrow), scenes Pinwheel Park … Storm Front |
 | `egg-toss-v7-levels-71-80` | 7.0 (70) | 80 | 81 | Ghost baskets (fade in and out, always catch), scenes Friendly Ghosts … Wisp Woods |
+| `egg-toss-v8-levels-81-90` | 8.0 (80) | 90 | 91 | Heart baskets (an egg back, max 3) and gold baskets (+3), scenes Treasure Trove … Golden Sunset |
 
-Planned but not made yet: v8 (levels 81-90, idea: heart baskets that give an egg back and gold baskets
-worth bonus points) and v9 (levels 91-100, a grand finale mixing every trick).
+Planned but not made yet: v9 (levels 91-100, a grand finale mixing every trick).
 
 ## Shipping a version
 

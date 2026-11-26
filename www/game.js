@@ -279,6 +279,13 @@
           if (e.perfect) A.perfectChime();
           buzz(e.perfect ? [15, 40, 25] : 18);
           // Climbing back through baskets already reached scores nothing, so no "+0".
+          if (e.bonus > 0) {
+            A.perfectChime();
+            floaters.push({ text: `Gold +${e.bonus}`, x: e.x, y: e.y + 40, age: 0, color: '#ffc300', size: 24 });
+          }
+          if (e.heart && state.lives >= C.START_LIVES && !events.some((ev) => ev.type === 'lifeUp')) {
+            floaters.push({ text: 'Eggs full!', x: e.x, y: e.y + 40, age: 0, color: '#ffb3c1', size: 18 });
+          }
           if (e.points > 0) {
             floaters.push({
               text: e.perfect ? 'Perfect +2' : '+1',
@@ -298,6 +305,11 @@
             saveBest(best);
             updateBestLabels();
           }
+          break;
+        case 'lifeUp':
+          A.perfectChime();
+          buzz([15, 40, 15, 40, 15]);
+          floaters.push({ text: '♥ +1 egg', x: e.x, y: e.y + 40, age: 0, color: '#ff4d6d', size: 24 });
           break;
         case 'levelUp':
           A.perfectChime();
@@ -628,6 +640,41 @@
       g.quadraticCurveTo(px + dir * len * 0.5, top + 9 - flap, px, top + 11);
       g.closePath();
       g.fill();
+    }
+    const unclaimed = b.n > state.highest; // prizes pay out only the first time
+    if (b.gold) {
+      // Gold paint over the weave, with a twinkle while the prize is still there.
+      g.save();
+      basketBodyPath(x, rimY, b.width);
+      g.clip();
+      const shine = g.createLinearGradient(x - b.width / 2, rimY, x + b.width / 2, rimY + BASKET_DEPTH);
+      shine.addColorStop(0, unclaimed ? 'rgba(255,236,140,0.85)' : 'rgba(255,236,140,0.4)');
+      shine.addColorStop(0.5, unclaimed ? 'rgba(255,195,0,0.85)' : 'rgba(255,195,0,0.4)');
+      shine.addColorStop(1, unclaimed ? 'rgba(214,140,0,0.85)' : 'rgba(214,140,0,0.4)');
+      g.fillStyle = shine;
+      g.fillRect(x - b.width, rimY - 10, b.width * 2, BASKET_DEPTH + 20);
+      g.restore();
+      if (unclaimed) {
+        const tw = 0.5 + 0.5 * Math.sin(clock * 6 + b.n);
+        g.fillStyle = `rgba(255,255,255,${tw})`;
+        starPath(x + b.width * 0.25, rimY + 10, 4 + tw * 2, clock * 2);
+        g.fill();
+      }
+    }
+    if (b.heart && unclaimed) {
+      // A bobbing heart above the basket until it is claimed.
+      const hx = x;
+      const hy = rimY - 26 + Math.sin(clock * 4 + b.n) * 3;
+      const s = 8;
+      g.fillStyle = '#ff4d6d';
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(hx, hy + s * 0.9);
+      g.bezierCurveTo(hx - s * 1.4, hy - s * 0.2, hx - s * 0.6, hy - s * 1.2, hx, hy - s * 0.4);
+      g.bezierCurveTo(hx + s * 0.6, hy - s * 1.2, hx + s * 1.4, hy - s * 0.2, hx, hy + s * 0.9);
+      g.fill();
+      g.stroke();
     }
     if (b.pulse) {
       // Orange band with speed stripes: one to three, the faster it goes right now.

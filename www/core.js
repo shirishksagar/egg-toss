@@ -12,7 +12,7 @@
  *
  * update(state, dt) mutates the state and returns a list of events for the
  * presentation layer (sound, vibration, floating text):
- *   toss, catch {basket, level, perfect, points}, levelUp {level}, landBack, catchLow {basket},
+ *   toss, catch {basket, level, perfect, points, bonus, heart}, lifeUp {lives}, levelUp {level}, landBack, catchLow {basket},
  *   crack {x, y}, respawn, gameOver
  *
  * Levels 1-20 have 5, 10, 15 ... 100 baskets; levels 21 and up have 50 each. The level
@@ -54,7 +54,7 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 80;           // normal levels
+  const LEVELS = 90;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
@@ -64,6 +64,7 @@
   const NAP_WARN = 0.3;        // seconds a napping basket blinks awake before it goes on
   const WIND_SLOW = [0.5, 0.75]; // a windy basket moves at this share of its speed (even, odd number)
   const GHOST_MIN = 0.15;      // a ghost basket is never fainter than this
+  const GOLD_BONUS = 3;        // extra points for reaching a gold basket
   const GROW_MID = 1.15;       // a growing basket's width swings around this × its normal width
 
   /**
@@ -79,6 +80,7 @@
     { from: 51, to: 60, tricks: [['nap', 2], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.5, 0.75] },
     { from: 61, to: 70, tricks: [['wind', 3], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.75] },
     { from: 71, to: 80, tricks: [['ghost', 3], ['wind', 1], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.78] },
+    { from: 81, to: 90, tricks: [['gold', 2], ['heart', 1], ['ghost', 1], ['wind', 1], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.8] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
@@ -89,6 +91,8 @@
     nap: { first: 51, tip: 'Sleepy baskets stop for a nap!' },
     wind: { first: 61, tip: 'Wind blows the egg: watch the arrow!' },
     ghost: { first: 71, tip: 'Ghost baskets fade, but still catch!' },
+    heart: { first: 81, tip: 'Hearts give an egg back, gold gives +3!' },
+    gold: { first: 81, tip: 'Hearts give an egg back, gold gives +3!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -116,7 +120,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 4050
+  const MASTER_START = levelEnd(LEVELS); // 4550
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -241,6 +245,14 @@
     ghost(state, b) {
       b.ghost = { rate: 1.5 + nextRandom(state) * 1.0, phase: nextRandom(state) * Math.PI * 2 };
     },
+    // Prize baskets, the first time they are reached: a heart gives back a lost egg (up to
+    // START_LIVES), gold adds GOLD_BONUS points.
+    heart(state, b) {
+      b.heart = true;
+    },
+    gold(state, b) {
+      b.gold = true;
+    },
   };
 
   function growWidth(grow) {
@@ -261,10 +273,11 @@
     if (has) TRICK_SETUP[which](state, b);
   }
 
-  /** Tip for the level-up banner when a level is the first to use a trick, else null. */
+  /** Tip for the level-up banner when a level is the first to use a trick (or tricks), else null. */
   function trickTip(level) {
-    for (const info of Object.values(TRICKS)) if (info.first === level) return info.tip;
-    return null;
+    const tips = new Set();
+    for (const info of Object.values(TRICKS)) if (info.first === level) tips.add(info.tip);
+    return tips.size ? [...tips].join(' ') : null;
   }
 
   function basket(state, n) {
@@ -430,7 +443,11 @@
         const isNew = state.current > state.highest;
         const newLevel = isNew && levelOf(state.current) > levelOf(state.highest);
         const perfect = isNew && Math.abs(offset) <= next.width * PERFECT_FRACTION;
-        const points = isNew ? (perfect ? 2 : 1) : 0;
+        // Prize baskets only pay out the first time they are reached.
+        const bonus = isNew && next.gold ? GOLD_BONUS : 0;
+        const points = isNew ? (perfect ? 2 : 1) + bonus : 0;
+        const lifeUp = isNew && next.heart && state.lives < START_LIVES;
+        if (lifeUp) state.lives += 1;
         state.highest = Math.max(state.highest, state.current);
         state.score += points;
         if (state.score > state.best) state.best = state.score;
@@ -439,7 +456,8 @@
         if (points > 0) state.levelPoints[level] = (state.levelPoints[level] || 0) + points;
         settle(egg, next);
         basket(state, state.current + 1); // make sure the next target exists
-        events.push({ type: 'catch', basket: state.current, level, perfect, points, x: egg.x, y: egg.y });
+        events.push({ type: 'catch', basket: state.current, level, perfect, points, bonus, heart: isNew && !!next.heart, x: egg.x, y: egg.y });
+        if (lifeUp) events.push({ type: 'lifeUp', lives: state.lives, x: egg.x, y: egg.y });
         if (newLevel) events.push({ type: 'levelUp', level: levelOf(state.current) });
         return;
       }
@@ -538,7 +556,7 @@
 
   return {
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
-    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW, GHOST_MIN,
+    BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW, GHOST_MIN, GOLD_BONUS,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
     cameraTarget, groundY, trickChance, trickTip, migrateSave, ghostAlpha,
   };

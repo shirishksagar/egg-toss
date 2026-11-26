@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 80);
-  assert.equal(core.MASTER_LEVEL, 81);
-  assert.equal(core.MASTER_START, 4050);
+  assert.equal(core.LEVELS, 90);
+  assert.equal(core.MASTER_LEVEL, 91);
+  assert.equal(core.MASTER_START, 4550);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -907,4 +907,82 @@ test('a ghost basket fades in and out but catches the egg even when it is fainte
   core.toss(t);
   const caught = settle(t).find((e) => e.type === 'catch');
   assert.ok(caught && caught.perfect, 'caught, Perfect even');
+});
+
+/** Puts the egg just below the first basket from level 81 on with the prize, ready to catch it dead centre. */
+function nextToPrize(prize, lives) {
+  const s = playing(8);
+  const b = findTrick(s, prize, core.levelStart(81));
+  jumpTo(s, b.n - 1);
+  s.lives = lives;
+  for (const trick of ['turn', 'pulse', 'grow', 'nap', 'ghost']) delete b[trick]; // keep the catch simple
+  b.width = core.basketSpec(b.n).width;
+  delete core.basket(s, b.n - 1).wind;
+  return { s, b };
+}
+
+test('a gold basket is worth bonus points, but only the first time', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  for (const b of all.baskets) {
+    if (b.gold || b.heart) assert.ok(core.levelOf(b.n - 1) >= 81, `basket ${b.n}: prizes start in level 81`);
+  }
+  assert.equal(core.GOLD_BONUS, 3);
+  const { s, b } = nextToPrize('gold', 3);
+  const level = core.levelOf(b.n - 1);
+  const caught = climb(s).find((e) => e.type === 'catch');
+  assert.equal(caught.perfect, true);
+  assert.equal(caught.bonus, 3);
+  assert.equal(caught.points, 2 + 3);
+  assert.equal(s.score, 5);
+  assert.equal(s.levelPoints[level], 5);
+
+  // Fall back below it and catch it again: nothing more.
+  moveAway(s, b.n + 1);
+  core.toss(s);
+  moveAway(s, b.n);
+  const low = core.basket(s, b.n - 1);
+  low.x = s.egg.x;
+  low.vx = 0;
+  settle(s);
+  assert.equal(s.current, b.n - 1);
+  const again = climb(s).find((e) => e.type === 'catch');
+  assert.equal(again.points, 0);
+  assert.equal(again.bonus, 0);
+  assert.equal(s.score, 5);
+});
+
+test('a heart basket gives back a lost egg, up to 3, the first time it is reached', () => {
+  const { s } = nextToPrize('heart', 2);
+  const events = climb(s);
+  assert.ok(events.find((e) => e.type === 'catch').heart);
+  assert.deepEqual(events.filter((e) => e.type === 'lifeUp').map((e) => e.lives), [3]);
+  assert.equal(s.lives, 3);
+
+  // With all three eggs it gives nothing extra.
+  const full = nextToPrize('heart', 3);
+  const fullEvents = climb(full.s);
+  assert.equal(fullEvents.filter((e) => e.type === 'lifeUp').length, 0);
+  assert.equal(full.s.lives, 3);
+
+  // Reaching it again later does not give another egg.
+  const { s: t, b } = nextToPrize('heart', 1);
+  climb(t);
+  assert.equal(t.lives, 2);
+  moveAway(t, b.n + 1);
+  core.toss(t);
+  moveAway(t, b.n);
+  const low = core.basket(t, b.n - 1);
+  low.x = t.egg.x;
+  low.vx = 0;
+  settle(t);
+  const again = climb(t);
+  assert.equal(again.filter((e) => e.type === 'lifeUp').length, 0);
+  assert.equal(again.find((e) => e.type === 'catch').heart, false);
+  assert.equal(t.lives, 2);
+});
+
+test('level 81 shows one tip for both prize baskets', () => {
+  assert.equal(core.trickTip(81), core.TRICKS.heart.tip);
+  assert.equal(core.TRICKS.heart.tip, core.TRICKS.gold.tip);
 });
