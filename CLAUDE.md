@@ -39,3 +39,26 @@ Bump `versionCode` / `versionName` in `android/app/build.gradle`, run `npm run b
 
 - New to Android development: explain steps in plain language.
 - After final testing, the APK goes into `D:\MyProjects\ClaudeApps\MyAppsAPK` (the build script does this).
+
+## Version branches
+
+`main` holds v1.1 (20 levels + Master). In Nov 2026 the owner asked for 10 more levels per branch, up to 100,
+each with a new trick. Every branch is made from the one before (so it holds all earlier levels) and they are
+**not** merged into `main`. Each branch's own CLAUDE.md has the rules, numbers and decisions for its trick.
+From v2 on, levels 21+ have 50 baskets each and the menu has "Start at" (any level reached), because a
+single climb to level 21 takes 1050 catches.
+
+| Branch | Version (code) | Levels | New trick |
+|---|---|---|---|
+| `egg-toss-v2-levels-21-30` | 2.0 (20) | 30 | baskets that turn back; "Start at" a reached level |
+| `egg-toss-v3-levels-31-40` | 3.0 (30) | 40 | baskets that speed up and slow down |
+| `egg-toss-v4-levels-41-50` | 4.0 (40) | 50 | baskets that grow and shrink |
+| `egg-toss-v5-levels-51-60` | 5.0 (50) | 60 | sleepy baskets that stop for a moment |
+| `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | wind that pushes the egg sideways |
+| `egg-toss-v7-levels-71-80` | 7.0 (70) | 80 | ghost baskets that fade in and out |
+| `egg-toss-v8-levels-81-90` | 8.0 (80) | 90 | heart baskets (an egg back) and gold baskets (+3) |
+| `egg-toss-v9-levels-91-100` | 9.0 (90) | 100 | grand finale mixing every trick; Master is level 101 |
+
+APKs for every version are in `D:\MyProjects\ClaudeApps\MyAppsAPK` (never in Git). They are built by checking
+each branch out here and running `npm run build:apk`; the signing key stays in this folder, untracked.
+Branch names start with the app name (`egg-toss-`), like the owner's other repos.
