@@ -54,7 +54,7 @@
   const BASE_LEVELS = 20;      // the first levels: level L has 5 × L baskets
   const BASE_END = 1050;       // basket that completes level 20
   const LATE_SIZE = 50;        // baskets in each level after 20
-  const LEVELS = 90;           // normal levels
+  const LEVELS = 100;           // normal levels
   const MASTER_LEVEL = LEVELS + 1; // endless, and faster with every basket
   const OLD_MASTER_KEY = 21;   // where v1.x saved the Master level's best
   // After level 20 baskets stay 56 wide and speed up gently: 265 at basket 1050, 330 by
@@ -81,6 +81,9 @@
     { from: 61, to: 70, tricks: [['wind', 3], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.75] },
     { from: 71, to: 80, tricks: [['ghost', 3], ['wind', 1], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.78] },
     { from: 81, to: 90, tricks: [['gold', 2], ['heart', 1], ['ghost', 1], ['wind', 1], ['nap', 1], ['grow', 1], ['pulse', 1], ['turn', 1]], chance: [0.55, 0.8] },
+    // Grand finale: every trick, and some baskets get a second one (combo, rising through the band).
+    { from: 91, to: 100, tricks: [['turn', 1], ['pulse', 1], ['grow', 1], ['nap', 1], ['wind', 1], ['ghost', 1], ['gold', 1], ['heart', 1]],
+      chance: [0.65, 0.85], combo: [0.25, 0.5] },
   ];
 
   /** First level that uses each trick, and the tip shown in its level-up banner. */
@@ -93,6 +96,7 @@
     ghost: { first: 71, tip: 'Ghost baskets fade, but still catch!' },
     heart: { first: 81, tip: 'Hearts give an egg back, gold gives +3!' },
     gold: { first: 81, tip: 'Hearts give an egg back, gold gives +3!' },
+    combo: { first: 91, tip: 'Grand finale: two tricks at once!' },
   };
 
   /** Small, fast, seedable PRNG (mulberry32). Returns the next float in [0, 1). */
@@ -120,7 +124,7 @@
     return level <= 1 ? 0 : levelEnd(level - 1);
   }
 
-  const MASTER_START = levelEnd(LEVELS); // 4550
+  const MASTER_START = levelEnd(LEVELS); // 5050
 
   /**
    * Level the egg is in while it sits in basket n. Catching the last basket of a level
@@ -239,6 +243,7 @@
       const strength = 20 + nextRandom(state) * 30;
       b.wind = nextRandom(state) < 0.5 ? -strength : strength;
       b.vx *= WIND_SLOW[b.n % 2];
+      if (b.pulse) b.pulse.base *= WIND_SLOW[b.n % 2]; // a pulse picked first swings around the slower speed
     },
     // Fades in and out (see ghostAlpha) once every 2π / rate seconds. Only its look changes:
     // it catches the egg just the same, even when it is faintest.
@@ -265,12 +270,33 @@
     return GHOST_MIN + (1 - GHOST_MIN) * (0.5 + 0.5 * Math.sin(b.ghost.phase));
   }
 
+  /** Pairs that never share a basket: two prizes, or two face bands (turn and nap). */
+  function comboFits(a, b) {
+    if (a === b) return false;
+    const pair = [a, b].sort().join('+');
+    return pair !== 'gold+heart' && pair !== 'nap+turn';
+  }
+
+  /** Chance that a trick basket in this level also gets a second trick (finale band only). */
+  function comboChance(level) {
+    const band = trickBand(level);
+    if (!band || !band.combo) return 0;
+    const [low, high] = band.combo;
+    if (level > band.to) return high;
+    return low + ((high - low) * (level - band.from)) / Math.max(1, band.to - band.from);
+  }
+
   function addTricks(state, b, level) {
     const band = trickBand(level);
     if (!band) return;
     const has = nextRandom(state) < trickChance(level);
     const which = pickTrick(band, nextRandom(state));
     if (has) TRICK_SETUP[which](state, b);
+    if (!band.combo) return; // bands before the finale draw nothing more
+    const two = nextRandom(state) < comboChance(level);
+    const others = { ...band, tricks: band.tricks.filter(([name]) => comboFits(which, name)) };
+    const second = pickTrick(others, nextRandom(state));
+    if (has && two) TRICK_SETUP[second](state, b);
   }
 
   /** Tip for the level-up banner when a level is the first to use a trick (or tricks), else null. */
@@ -370,6 +396,15 @@
         nap.left += nap.asleep ? nap.sleep : nap.awake;
       }
     }
+    const grow = b.grow;
+    if (grow) {
+      grow.phase = (grow.phase + grow.rate * dt) % (Math.PI * 2);
+      b.width = growWidth(grow);
+      const min = b.width / 2 + SIDE_MARGIN; // growing near a wall pushes it back inside
+      b.x = Math.min(WORLD_W - min, Math.max(min, b.x));
+    }
+    if (b.ghost) b.ghost.phase = (b.ghost.phase + b.ghost.rate * dt) % (Math.PI * 2);
+    if (nap && nap.asleep) return; // a napping basket's turns and speed swings wait until it wakes
     const turn = b.turn;
     if (turn) {
       turn.left -= dt;
@@ -384,14 +419,6 @@
       pulse.phase = (pulse.phase + pulse.rate * dt) % (Math.PI * 2);
       b.vx = Math.sign(b.vx) * pulse.base * (1 + pulse.amp * Math.sin(pulse.phase));
     }
-    const grow = b.grow;
-    if (grow) {
-      grow.phase = (grow.phase + grow.rate * dt) % (Math.PI * 2);
-      b.width = growWidth(grow);
-      const min = b.width / 2 + SIDE_MARGIN; // growing near a wall pushes it back inside
-      b.x = Math.min(WORLD_W - min, Math.max(min, b.x));
-    }
-    if (b.ghost) b.ghost.phase = (b.ghost.phase + b.ghost.rate * dt) % (Math.PI * 2);
   }
 
   /** How far the egg is from a basket's centre, or null if it would miss the basket. */
@@ -558,6 +585,6 @@
     WORLD_W, BASKET_GAP, GRAVITY, TOSS_SPEED, EGG_RADIUS, START_LIVES, CRACK_TIME, PERFECT_FRACTION, GROUND_Y,
     BASE_LEVELS, BASE_END, LEVELS, MASTER_LEVEL, MASTER_START, TRICK_BANDS, TRICKS, TURN_WARN, GROW_MID, NAP_WARN, WIND_SLOW, GHOST_MIN, GOLD_BONUS,
     newGame, start, pause, toss, update, basket, basketSpec, levelOf, levelSize, levelEnd, levelStart, levelProgress,
-    cameraTarget, groundY, trickChance, trickTip, migrateSave, ghostAlpha,
+    cameraTarget, groundY, trickChance, comboChance, trickTip, migrateSave, ghostAlpha,
   };
 });

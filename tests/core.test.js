@@ -245,9 +245,9 @@ test('the camera follows a falling egg down and returns to its basket', () => {
 });
 
 test('level L has 5 × L baskets up to 20, then 50 each, then the endless Master level', () => {
-  assert.equal(core.LEVELS, 90);
-  assert.equal(core.MASTER_LEVEL, 91);
-  assert.equal(core.MASTER_START, 4550);
+  assert.equal(core.LEVELS, 100);
+  assert.equal(core.MASTER_LEVEL, 101);
+  assert.equal(core.MASTER_START, 5050);
   assert.equal(core.MASTER_START, 1050 + 50 * (core.LEVELS - 20));
   assert.equal(core.levelSize(1), 5);
   assert.equal(core.levelSize(2), 10);
@@ -577,6 +577,7 @@ test('after level 20 baskets stay 56 wide and speed up only gently', () => {
   const perLevel = core.basketSpec(core.levelEnd(22)).speed - core.basketSpec(core.levelEnd(21)).speed;
   assert.ok(Math.abs(perLevel - 65 / 80) < 1e-9, `${perLevel} faster per level`);
   assert.ok(core.basketSpec(core.MASTER_START - 1).speed < 331);
+  assert.ok(core.basketSpec(core.MASTER_START - 1).speed > 329, 'about 330 by the end of level 100');
   // The Master level carries on from there.
   assert.ok(Math.abs(core.basketSpec(core.MASTER_START).speed - core.basketSpec(core.MASTER_START - 1).speed) < 1);
 });
@@ -985,4 +986,52 @@ test('a heart basket gives back a lost egg, up to 3, the first time it is reache
 test('level 81 shows one tip for both prize baskets', () => {
   assert.equal(core.trickTip(81), core.TRICKS.heart.tip);
   assert.equal(core.TRICKS.heart.tip, core.TRICKS.gold.tip);
+});
+
+const MOVING_TRICKS = ['turn', 'pulse', 'grow', 'nap', 'wind', 'ghost', 'gold', 'heart'];
+const tricksOf = (b) => MOVING_TRICKS.filter((t) => b[t]);
+
+test('the grand finale mixes every trick, and some baskets have two at once', () => {
+  const all = core.newGame(0, 2);
+  core.basket(all, core.MASTER_START + 300);
+  const seen = new Set();
+  let combos = 0;
+  for (const b of all.baskets) {
+    const tricks = tricksOf(b);
+    assert.ok(tricks.length <= 2, `basket ${b.n}: at most two tricks`);
+    if (tricks.length === 2) {
+      combos++;
+      assert.ok(core.levelOf(b.n - 1) >= 91, `basket ${b.n}: combos start in level 91`);
+      assert.notDeepEqual(tricks.sort(), ['gold', 'heart'], 'never two prizes');
+      assert.notDeepEqual(tricks.sort(), ['nap', 'turn'], 'never nap and turn together');
+    }
+    if (core.levelOf(b.n - 1) >= 91 && core.levelOf(b.n - 1) <= 100) for (const t of tricks) seen.add(t);
+  }
+  assert.deepEqual([...seen].sort(), [...MOVING_TRICKS].sort(), 'every trick shows up in levels 91-100');
+  assert.ok(combos > 30, `${combos} combo baskets`);
+  assert.equal(core.comboChance(90), 0);
+  assert.ok(core.comboChance(100) > core.comboChance(91));
+  assert.equal(core.trickTip(91), core.TRICKS.combo.tip);
+});
+
+test('in the finale a napping basket holds its pulse until it wakes, and wind slows a pulse too', () => {
+  const s = playing(8);
+  core.basket(s, core.MASTER_START);
+  const both = s.baskets.find((b) => b.nap && b.pulse);
+  assert.ok(both, 'there is a napping, pulsing basket');
+  jumpTo(s, both.n - 1);
+  Object.assign(both.nap, { awake: 1, sleep: 0.5, left: 0.5, asleep: true });
+  const phase = both.pulse.phase;
+  const x = both.x;
+  core.update(s, 0.2);
+  assert.equal(both.pulse.phase, phase, 'its speed swing waits');
+  assert.equal(both.x, x, 'and it stands still');
+  core.update(s, 0.2);
+  core.update(s, 0.2);
+  assert.notEqual(both.pulse.phase, phase, 'awake again: swinging on');
+
+  const windy = s.baskets.find((b) => b.wind && b.pulse);
+  assert.ok(windy, 'there is a windy, pulsing basket');
+  const plain = core.basketSpec(windy.n).speed;
+  assert.ok(windy.pulse.base < plain * 0.8, 'its pulse swings around the slower windy speed');
 });

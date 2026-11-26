@@ -1887,6 +1887,125 @@
     g.fillRect(x - 15, y - 26, 4, 22);
   }
 
+  function ferrisWheel(g, v) {
+    const cx = v.W * 0.62;
+    const cy = v.H * 0.62;
+    const r = 95;
+    g.strokeStyle = 'rgba(255,220,240,0.7)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(cx - 40, v.H); g.lineTo(cx, cy); g.lineTo(cx + 40, v.H);
+    g.stroke();
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.stroke();
+    const turn = v.clock * 0.25;
+    const colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff924c'];
+    for (let k = 0; k < 12; k++) {
+      const a = turn + (k / 12) * Math.PI * 2;
+      const px = cx + Math.cos(a) * r;
+      const py = cy + Math.sin(a) * r;
+      g.strokeStyle = 'rgba(255,220,240,0.45)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.lineTo(px, py);
+      g.stroke();
+      g.fillStyle = colors[k % colors.length];
+      g.fillRect(px - 6, py, 12, 9);
+      g.fillStyle = `rgba(255,240,150,${0.5 + 0.5 * Math.sin(v.clock * 4 + k)})`;
+      g.beginPath();
+      g.arc(px, py - 2, 2, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function waterfall(g, v) {
+    const x0 = v.W * 0.32;
+    const w = 70;
+    g.fillStyle = '#6c757d';
+    g.fillRect(0, v.H * 0.35, x0, v.H);
+    g.fillRect(x0 + w, v.H * 0.35, v.W, v.H);
+    g.fillStyle = 'rgba(160,220,255,0.85)';
+    g.fillRect(x0, v.H * 0.35, w, v.H);
+    g.strokeStyle = 'rgba(255,255,255,0.7)';
+    g.lineWidth = 2;
+    for (let k = 0; k < 7; k++) {
+      const x = x0 + 6 + k * 10;
+      const off = (v.clock * 160 + k * 37) % 60;
+      g.beginPath();
+      for (let y = v.H * 0.35 + off - 60; y < v.H; y += 60) {
+        g.moveTo(x, y);
+        g.lineTo(x, y + 28);
+      }
+      g.stroke();
+    }
+    for (let k = 0; k < 10; k++) {
+      const t = (v.clock * 0.8 + k / 10) % 1;
+      g.fillStyle = `rgba(255,255,255,${0.6 * (1 - t)})`;
+      g.beginPath();
+      g.arc(x0 + w / 2 + Math.sin(k * 3) * 40 * t, v.H - 10 - t * 30, 6 + t * 10, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function sunRays(g, v, { color = '255,240,180', x = 0.5, y = 0.45 } = {}) {
+    const cx = v.W * x;
+    const cy = v.H * y;
+    const turn = v.clock * 0.15;
+    for (let k = 0; k < 16; k++) {
+      const a = turn + (k / 16) * Math.PI * 2;
+      g.fillStyle = `rgba(${color},${k % 2 ? 0.08 : 0.16})`;
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(a - 0.1) * 600, cy + Math.sin(a - 0.1) * 600);
+      g.lineTo(cx + Math.cos(a + 0.1) * 600, cy + Math.sin(a + 0.1) * 600);
+      g.closePath();
+      g.fill();
+    }
+  }
+
+  /** The finale's giant golden egg with a crown, bobbing in the middle of the sky. */
+  function goldenEgg(g, v) {
+    const x = v.W * 0.5;
+    const y = v.H * 0.42 + Math.sin(v.clock * 1.5) * 6;
+    const glow = g.createRadialGradient(x, y, 10, x, y, 110);
+    glow.addColorStop(0, 'rgba(255,230,120,0.6)');
+    glow.addColorStop(1, 'rgba(255,230,120,0)');
+    g.fillStyle = glow;
+    g.fillRect(x - 110, y - 110, 220, 220);
+    const body = g.createRadialGradient(x - 12, y - 18, 4, x, y, 50);
+    body.addColorStop(0, '#fff6c2');
+    body.addColorStop(1, '#f2a900');
+    g.fillStyle = body;
+    g.beginPath();
+    g.ellipse(x, y, 34, 44, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#3b2a1a';
+    g.beginPath();
+    g.arc(x - 11, y - 6, 3.5, 0, Math.PI * 2);
+    g.arc(x + 11, y - 6, 3.5, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#3b2a1a';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.arc(x, y + 4, 12, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.stroke();
+    g.fillStyle = '#ffd23f';
+    g.strokeStyle = '#c9711a';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(x - 20, y - 38); g.lineTo(x - 24, y - 60); g.lineTo(x - 11, y - 48); g.lineTo(x, y - 66);
+    g.lineTo(x + 11, y - 48); g.lineTo(x + 24, y - 60); g.lineTo(x + 20, y - 38);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.fillStyle = '#e63946';
+    g.beginPath();
+    g.arc(x, y - 50, 3, 0, Math.PI * 2);
+    g.fill();
+  }
+
   // ---- The levels ----------------------------------------------------------------
 
   const THEMES = [
@@ -2077,6 +2196,28 @@
       deco: (g, v) => { castle(g, v, { color: 'rgba(160,110,200,0.5)' }); petals(g, v, { count: 20 }); hearts(g, v, { count: 8 }); } },
     { name: 'Golden Sunset', top: '#ff8800', bottom: '#ffe8a3',
       deco: (g, v) => { sun(g, v, { x: 0.5, y: 0.62, r: 56, color: '#fff1b8', glow: 'rgba(255,200,80,0.55)' }); clouds(g, v, { color: 'rgba(255,220,170,0.7)', size: 1.3 }); sparkles(g, v, { count: 20 }); } },
+    // Levels 91-100 (v9): the grand finale, every trick mixed (some baskets with two).
+    { name: 'Festival of Tricks', top: '#4cc9f0', bottom: '#fff3b0',
+      deco: (g, v) => { bunting(g, v); kites(g, v); balloons(g, v); } },
+    { name: 'Twilight Carnival', top: '#3a0ca3', bottom: '#f72585',
+      deco: (g, v) => { stars(g, v, { count: 25, alpha: 0.6 }); ferrisWheel(g, v); lanterns(g, v); } },
+    { name: 'Starlight Parade', top: '#03071e', bottom: '#370617',
+      deco: (g, v) => { stars(g, v, { count: 60 }); meteors(g, v, { count: 3 }); fireworks(g, v); } },
+    { name: 'Rainbow Falls', top: '#8ecae6', bottom: '#e0fbfc',
+      deco: (g, v) => { rainbow(g, v); waterfall(g, v); butterflies(g, v, { count: 5 }); } },
+    { name: 'Cloud Kingdom', top: '#a2d2ff', bottom: '#fff0f3',
+      deco: (g, v) => { castle(g, v); hotAirBalloons(g, v); } },
+    { name: 'Ocean of Stars', top: '#001233', bottom: '#023e7d',
+      deco: (g, v) => { stars(g, v, { count: 70 }); moon(g, v, { x: 0.8, y: 0.15, r: 24 }); sea(g, v, { color: '#002855', foam: 'rgba(200,220,255,0.4)', level: 0.8 }); whales(g, v); } },
+    { name: 'Candy Comet', top: '#590d22', bottom: '#ff8fab',
+      deco: (g, v) => { stars(g, v, { count: 30, alpha: 0.6 }); comet(g, v); confetti(g, v, { count: 30 }); lollipops(g, v); } },
+    { name: 'Aurora Festival', top: '#03045e', bottom: '#0077b6',
+      deco: (g, v) => { stars(g, v, { count: 40 }); aurora(g, v); lanterns(g, v, { color: '#ff70a6' }); snow(g, v, { count: 30 }); } },
+    { name: 'Sunrise Summit', top: '#ff7b54', bottom: '#ffe5b4',
+      deco: (g, v) => { sun(g, v, { x: 0.5, y: 0.5, r: 50, color: '#fff2b2', glow: 'rgba(255,190,120,0.5)' }); mountains(g, v, { color: '#7d5a8c', snowCap: true }); paperPlanes(g, v); } },
+    // Level 100: the grand finale scene.
+    { name: 'Grand Finale', top: '#ff006e', bottom: '#ffbe0b',
+      deco: (g, v) => { sunRays(g, v); rainbow(g, v); fireworks(g, v); confetti(g, v); goldenEgg(g, v); } },
     // The last scene is the endless Master level.
     { name: 'Master Level', top: '#14001f', bottom: '#3d0a2e',
       deco: (g, v) => { nebula(g, v); stars(g, v, { count: 80 }); galaxy(g, v); sparkles(g, v, { count: 40 }); masterGlow(g, v); } },

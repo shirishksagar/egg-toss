@@ -86,6 +86,14 @@ Never print, commit or overwrite them; without them no update to the same app ca
   `GOLD_BONUS` = 3 points (catch event `bonus`, counted in the level's points). One shared tip on level 81
   (`trickTip` joins tips of tricks that start on the same level). A heart bobs above an unclaimed heart
   basket; gold baskets are painted gold and twinkle until claimed.
+- **Grand finale (levels 91-100, v9):** every trick (turn, pulse, grow, nap, wind, ghost, gold, heart) with
+  equal weight, chance 65% → 85%. A trick basket also gets a second trick with `comboChance` 25% → 50%
+  through the band (`combo` in the band; only this band draws the two extra numbers, so earlier levels are
+  unchanged: checked against v8). Never two prizes, and never nap + turn (their face bands would overlap).
+  While a basket naps, its turn and pulse timers wait. Wind also slows a pulse's base speed. Gold paint is
+  drawn first so the other trick's marks show on top. Level 100 has the "Grand Finale" scene (golden egg
+  with a crown, rays, rainbow, fireworks, confetti); its banner reads "LEVEL 100!", and the Master banner
+  says "You beat all 100 levels!". The rules say "Reach level 100 for the grand finale!".
 
 ## Starting from a level, saves
 
@@ -116,8 +124,7 @@ Branches are not merged into main.
 | `egg-toss-v6-levels-61-70` | 6.0 (60) | 70 | 71 | Wind that pushes the flying egg sideways (flag + arrow), scenes Pinwheel Park … Storm Front |
 | `egg-toss-v7-levels-71-80` | 7.0 (70) | 80 | 81 | Ghost baskets (fade in and out, always catch), scenes Friendly Ghosts … Wisp Woods |
 | `egg-toss-v8-levels-81-90` | 8.0 (80) | 90 | 91 | Heart baskets (an egg back, max 3) and gold baskets (+3), scenes Treasure Trove … Golden Sunset |
-
-Planned but not made yet: v9 (levels 91-100, a grand finale mixing every trick).
+| `egg-toss-v9-levels-91-100` | 9.0 (90) | 100 | 101 | Grand finale: every trick mixed, combo baskets with two tricks, level-100 finale scene; scenes Festival of Tricks … Grand Finale |
 
 ## Shipping a version
 

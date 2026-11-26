@@ -415,10 +415,13 @@
     g.lineWidth = 6;
     g.strokeStyle = '#7a3b12';
     const master = banner.level >= C.MASTER_LEVEL;
-    const title = master ? 'MASTER LEVEL' : `Level ${banner.level}`;
+    const finale = banner.level === C.LEVELS;
+    const title = master ? 'MASTER LEVEL' : finale ? `LEVEL ${banner.level}!` : `Level ${banner.level}`;
     const subtitle = master
-      ? 'Endless baskets, faster every time'
-      : `${B.theme(banner.level).name} · ${C.levelSize(banner.level)} baskets`;
+      ? `You beat all ${C.LEVELS} levels! Now endless`
+      : finale
+        ? `The grand finale · ${C.levelSize(banner.level)} baskets`
+        : `${B.theme(banner.level).name} · ${C.levelSize(banner.level)} baskets`;
     g.strokeText(title, 0, -12);
     g.fillStyle = '#ffd23f';
     g.fillText(title, 0, -12);
@@ -568,6 +571,27 @@
 
   /** Marks that tell which trick a basket has. */
   function drawTrickMarks(b, x, rimY) {
+    const unclaimed = b.n > state.highest; // prizes pay out only the first time
+    if (b.gold) {
+      // (Drawn first: with two tricks, the other one's marks go on top.)
+      // Gold paint over the weave, with a twinkle while the prize is still there.
+      g.save();
+      basketBodyPath(x, rimY, b.width);
+      g.clip();
+      const shine = g.createLinearGradient(x - b.width / 2, rimY, x + b.width / 2, rimY + BASKET_DEPTH);
+      shine.addColorStop(0, unclaimed ? 'rgba(255,236,140,0.85)' : 'rgba(255,236,140,0.4)');
+      shine.addColorStop(0.5, unclaimed ? 'rgba(255,195,0,0.85)' : 'rgba(255,195,0,0.4)');
+      shine.addColorStop(1, unclaimed ? 'rgba(214,140,0,0.85)' : 'rgba(214,140,0,0.4)');
+      g.fillStyle = shine;
+      g.fillRect(x - b.width, rimY - 10, b.width * 2, BASKET_DEPTH + 20);
+      g.restore();
+      if (unclaimed) {
+        const tw = 0.5 + 0.5 * Math.sin(clock * 6 + b.n);
+        g.fillStyle = `rgba(255,255,255,${tw})`;
+        starPath(x + b.width * 0.25, rimY + 10, 4 + tw * 2, clock * 2);
+        g.fill();
+      }
+    }
     if (b.turn) {
       // Teal band with arrows pointing the way it goes; they flash just before it turns.
       const bandY = rimY + 13;
@@ -640,26 +664,6 @@
       g.quadraticCurveTo(px + dir * len * 0.5, top + 9 - flap, px, top + 11);
       g.closePath();
       g.fill();
-    }
-    const unclaimed = b.n > state.highest; // prizes pay out only the first time
-    if (b.gold) {
-      // Gold paint over the weave, with a twinkle while the prize is still there.
-      g.save();
-      basketBodyPath(x, rimY, b.width);
-      g.clip();
-      const shine = g.createLinearGradient(x - b.width / 2, rimY, x + b.width / 2, rimY + BASKET_DEPTH);
-      shine.addColorStop(0, unclaimed ? 'rgba(255,236,140,0.85)' : 'rgba(255,236,140,0.4)');
-      shine.addColorStop(0.5, unclaimed ? 'rgba(255,195,0,0.85)' : 'rgba(255,195,0,0.4)');
-      shine.addColorStop(1, unclaimed ? 'rgba(214,140,0,0.85)' : 'rgba(214,140,0,0.4)');
-      g.fillStyle = shine;
-      g.fillRect(x - b.width, rimY - 10, b.width * 2, BASKET_DEPTH + 20);
-      g.restore();
-      if (unclaimed) {
-        const tw = 0.5 + 0.5 * Math.sin(clock * 6 + b.n);
-        g.fillStyle = `rgba(255,255,255,${tw})`;
-        starPath(x + b.width * 0.25, rimY + 10, 4 + tw * 2, clock * 2);
-        g.fill();
-      }
     }
     if (b.heart && unclaimed) {
       // A bobbing heart above the basket until it is claimed.
